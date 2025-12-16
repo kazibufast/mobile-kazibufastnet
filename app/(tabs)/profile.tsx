@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -10,10 +11,22 @@ const Profile: React.FC = () => {
   const user = getUser();
   
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+  try {
+    // Remove token from AsyncStorage
+    await AsyncStorage.removeItem('authToken'); // replace 'authToken' with the actual key you used
+    // Optionally remove any stored user info
+    await AsyncStorage.removeItem('user');
+
+    // Also clear in-memory token
     setToken(null);
+
+    // Navigate to login
     router.push("/mpin-login");
-  };
+  } catch (error) {
+    console.error("Error clearing token:", error);
+  }
+};
 
 
   return (

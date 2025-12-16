@@ -52,6 +52,8 @@ const STORAGE_KEYS = {
   ATTACHMENTS: '@kazichat_attachments'
 };
 
+
+
 const OverlayButton: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const router = useRouter();
