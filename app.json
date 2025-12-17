@@ -1,0 +1,95 @@
+{
+  "expo": {
+    "name": "kazi",
+    "slug": "kazi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/kazi.png",
+    "scheme": "kazi",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kazibufast.kazi",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "tel",
+          "telprompt",
+          "sms",
+          "mailto",
+          "fb",
+          "fbapi",
+          "fbauth2",
+          "fbshareextension",
+          "fb-messenger-api",
+          "fb-messenger-share-api",
+          "fbmessenger",
+          "fb-messenger",
+          "whatsapp",
+          "twitter",
+          "twitterauth"
+        ],
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication"
+      }
+    },
+    
+    "android": {
+      "package": "com.yourcompany.kazi",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/kazi.png"
+       
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGesture": false,
+      "permissions": [
+        "android.permission.CALL_PHONE",
+        "android.permission.INTERNET"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "tel"
+            },
+            {
+              "scheme": "mailto"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/kazi.png"
+    },
+    
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/kazi.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+    
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

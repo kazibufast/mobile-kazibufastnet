@@ -1,0 +1,22 @@
+ welcomeSection: {
+    paddingHorizontal: scaleSize(20),
+    paddingTop: scaleSize(20),
+    paddingBottom: scaleSize(25),
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: scaleSize(20),
+    borderBottomRightRadius: scaleSize(20),
+    marginBottom: scaleSize(10),
+    marginHorizontal: scaleSize(0),
+    elevation: 3,
+  },
+  greeting: {
+    fontSize: scaleSize(24),
+    fontWeight: '700',
+    color: '#1A202C',
+    marginBottom: scaleSize(4),
+  },
+  role: {
+    fontSize: scaleSize(16),
+    color: '#4A5568',
+    fontWeight: '500',
+  },
