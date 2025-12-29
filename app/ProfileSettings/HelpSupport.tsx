@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Header from '../../components/Header';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const HelpSupport: React.FC = () => {
   const router = useRouter();
@@ -46,18 +46,12 @@ const HelpSupport: React.FC = () => {
   };
 
   return (
+     <SafeAreaView style={styles.safeArea} edges={[ 'left', 'right']}>
     <View style={styles.container}>
-      <Header />
-
       <View style={styles.contentContainer}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style= {{flexDirection:'row', justifyContent: 'center', alignItems: 'center'}}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
+         
 
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Help & Support</Text>
@@ -159,10 +153,17 @@ const HelpSupport: React.FC = () => {
         </ScrollView>
       </View>
     </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+   safeArea: {
+    flex: 1,
+    backgroundColor: '#f6f7f8ff',
+    paddingBottom: 40,
+    paddingTop: 30
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

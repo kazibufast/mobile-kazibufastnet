@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { setToken } from '../../scripts/token';
 import { getUser } from '../../scripts/user';
 
@@ -11,9 +12,30 @@ const Profile: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleLogout = () => {
-    setToken(null);
-    router.push("/mpin-login");
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "OK",
+          onPress: () => {
+            setToken(null);
+            router.push("/mpin-login");
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
+
+  const handleTimeOut = () => {
+    router.push("/(time-out)/time-out");
+  };
+
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -23,86 +45,92 @@ const Profile: React.FC = () => {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.contentContainer}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00AFA1" />
-          }
-        >
-          <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={require('../../assets/images/kazi.png')}
-                style={styles.avatar}
-                resizeMode="cover"
-              />
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      <View style={styles.container}>
+        <View style={styles.contentContainer}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00AFA1" />
+            }
+          >
+            <View style={styles.profileHeader}>
+              <Text style={styles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}> {user?.name || 'Guest'}</Text>
+              <Text style={styles.userEmail}>{user?.mobile_number || '+63 912 3456 789'}</Text>
             </View>
-            <Text style={styles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}> {user?.name || 'Guest'}</Text>
-            <Text style={styles.userEmail}>{user?.mobile_number || '+63 912 3456 789'}</Text>
-          </View>
 
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Settings</Text>
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Settings</Text>
 
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => router.push('/ProfileSettings/AccountSettings')}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="person-outline" size={20} color="#666" />
-                <Text style={styles.settingText}>Account Settings</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/ProfileSettings/AccountSettings')}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="person-outline" size={20} color="#666" />
+                  <Text style={styles.settingText}>Account Settings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/ProfileSettings/PrivacySecurity')}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#666" />
+                  <Text style={styles.settingText}>Privacy & Security</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/ProfileSettings/HelpSupport')}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="help-circle-outline" size={20} color="#666" />
+                  <Text style={styles.settingText}>Help & Support</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/ProfileSettings/AboutKazibufast')}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="information-circle-outline" size={20} color="#666" />
+                  <Text style={styles.settingText}>About Kazibufast</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+            </View>
+
+
+            <TouchableOpacity style={styles.timeOutButton} onPress={() => router.push("/(time-out)/time-out")}>
+              <Text style={styles.logoutText}>Time Out</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => router.push('/ProfileSettings/PrivacySecurity')}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="lock-closed-outline" size={20} color="#666" />
-                <Text style={styles.settingText}>Privacy & Security</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => router.push('/ProfileSettings/HelpSupport')}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="help-circle-outline" size={20} color="#666" />
-                <Text style={styles.settingText}>Help & Support</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Log Out</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => router.push('/ProfileSettings/AboutKazibufast')}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="information-circle-outline" size={20} color="#666" />
-                <Text style={styles.settingText}>About Kazibufast</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f7f7f7ff',
+    paddingTop: 25,
+  },
   container: { flex: 1, backgroundColor: '#fff' },
   contentContainer: { flex: 1 },
   scrollView: { flex: 1 },
@@ -119,7 +147,8 @@ const styles = StyleSheet.create({
   settingText: { fontSize: 16, color: '#333', marginLeft: 15 },
   termsItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, backgroundColor: '#f8f8f8', borderRadius: 8, marginBottom: 8 },
   termsText: { fontSize: 15, color: '#333' },
-  logoutButton: { marginHorizontal: 20, marginBottom: 100, paddingVertical: 15, backgroundColor: '#ff6b6b', borderRadius: 8, alignItems: 'center' },
+  timeOutButton: { marginHorizontal: 20, margin: 5, paddingVertical: 15, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center' },
+  logoutButton: { marginHorizontal: 20, margin: 10, paddingVertical: 15, backgroundColor: '#ff6b6b', borderRadius: 8, alignItems: 'center' },
   logoutText: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
 });
 

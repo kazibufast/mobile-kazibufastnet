@@ -1,5 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -13,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -29,6 +31,17 @@ export default function LoginScreen() {
 
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout> | undefined;
+
+        const checkPhoneNumber = async () => {
+            const storedNumber = await AsyncStorage.getItem("phone_number");
+
+            if (storedNumber) {
+                // Redirect to 'mpin-login' if a phone number exists in AsyncStorage
+                router.replace('/(auth)/mpin-login');
+            }
+        };
+
+        checkPhoneNumber();
 
         if (showOtpScreen && resendTimer > 0) {
             timer = setTimeout(() => {
@@ -66,10 +79,10 @@ export default function LoginScreen() {
         if (cleaned.length === 10) {
             const firstThree = cleaned.slice(0, 3);
             const lastThree = cleaned.slice(7, 10);
-            return `+63 ${firstThree.slice(0, 1)}** *** ${lastThree}`;
+            return `${firstThree.slice(0, 1)}** *** ${lastThree}`;
         }
 
-        return `+63 ${cleaned}`;
+        return `${cleaned}`;
     };
 
     const handleSendOtp = async () => {
@@ -92,8 +105,21 @@ export default function LoginScreen() {
 
         setLoading(true);
 
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            // staging api call for sending otp
+            const response = await fetch(
+                "https://staging.kazibufastnet.com/api/verify_number",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        mobile_number: "" + cleanPhone,
+                    }),
+                }
+            );
+
             const encryptedPhone = encryptPhoneNumber(cleanPhone);
             Alert.alert(
                 "OTP Sent",
@@ -105,21 +131,11 @@ export default function LoginScreen() {
             setResendTimer(30);
             setCanResend(false);
             setOtp(["", "", "", "", "", ""]);
-        }, 1500);
-
-        // staging api call for sending otp
-        const response = await fetch(
-            "https://staging.kazibufastnet.com/api/verify_number",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    mobile_number: "+63" + cleanPhone,
-                }),
-            }
-        );
+        } catch (error) {
+            Alert.alert("Error", "Failed to send OTP");
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Otp handlers
@@ -143,7 +159,7 @@ export default function LoginScreen() {
                         Accept: "application/json",
                     },
                     body: JSON.stringify({
-                        mobile_number: "+63" + phoneNumber.replace(/\D/g, ""),
+                        mobile_number: "" + phoneNumber.replace(/\D/g, ""),
                         otp: otpString,
                     }),
                 }
@@ -157,10 +173,10 @@ export default function LoginScreen() {
             }
 
             Alert.alert("Success", "Phone number verified successfully!");
-            router.push({
-                pathname: "/setup-pin",
+            router.replace({
+                pathname: "/(auth)/setup-pin",
                 params: {
-                    phone: "+63" + phoneNumber,
+                    phone: "" + phoneNumber,
                     verified: "true",
                 },
             });
@@ -217,11 +233,124 @@ export default function LoginScreen() {
     };
 
     const handleSignIn = () => {
-        router.push("/mpin-login");
+        router.replace("/(auth)/mpin-login");
     };
+
 
     if (showOtpScreen) {
         return (
+            <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContainer}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <View style={styles.container}>
+                            <TouchableOpacity
+                                style={styles.backButton}
+                                onPress={handleBackToPhone}
+                            >
+                                <Text style={styles.backButtonText}>←</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.logoContainer}>
+                                <Image
+                                    source={require("../../assets/images/kazi.png")}
+                                    style={styles.logo}
+                                    resizeMode="contain"
+                                />
+                                <View style={{ flexDirection: "row" }}>
+                                    <View>
+                                        <Text
+                                            style={{
+                                                fontSize: 24,
+                                                fontWeight: "900",
+                                                color: "#00afa1ff",
+                                                marginRight: 2,
+                                            }}
+                                        >
+                                            KAZIBU
+                                        </Text>
+                                    </View>
+                                    <View>
+                                        <Text
+                                            style={{
+                                                fontSize: 24,
+                                                fontWeight: "900",
+                                                color: "#00afa1ff",
+                                            }}
+                                        >
+                                            FAST
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <Text style={styles.title}>Verify Phone Number</Text>
+                            <Text style={styles.subtitle}>
+                                Enter the 6-digit code sent to{"\n"}
+                                <Text style={styles.phoneNumberText}> +63{encryptPhoneNumber(phoneNumber)}</Text>
+
+                            </Text>
+
+                            <View style={styles.otpContainer}>
+                                {[0, 1, 2, 3, 4, 5].map((index) => (
+                                    <TextInput
+                                        key={index}
+                                        ref={(ref) => {
+                                            otpRefs.current[index] = ref;
+                                        }}
+                                        style={[styles.otpInput, otp[index] && styles.otpInputFilled]}
+                                        value={otp[index]}
+                                        onChangeText={(value) => handleOtpChange(index, value)}
+                                        onKeyPress={(e) => handleOtpKeyPress(index, e)}
+                                        keyboardType="number-pad"
+                                        maxLength={1}
+                                        editable={!otpLoading}
+                                        selectTextOnFocus
+                                        textAlign="center"
+                                        autoFocus={index === 0}
+                                    />
+                                ))}
+                            </View>
+
+                            <View style={styles.resendContainer}>
+                                <Text style={styles.resendText}>Didn't receive the code? </Text>
+                                <TouchableOpacity onPress={handleResendOtp} disabled={!canResend}>
+                                    <Text
+                                        style={[
+                                            styles.resendLink,
+                                            !canResend && styles.resendLinkDisabled,
+                                        ]}
+                                    >
+                                        {canResend ? "Resend OTP" : `Resend in ${resendTimer}s`}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.button, otpLoading && styles.buttonDisabled]}
+                                onPress={handleVerifyOtp}
+                                disabled={otpLoading}
+                            >
+                                {otpLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.buttonText}>Verify OTP</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -231,16 +360,9 @@ export default function LoginScreen() {
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.container}>
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={handleBackToPhone}
-                        >
-                            <Text style={styles.backButtonText}>←</Text>
-                        </TouchableOpacity>
-
                         <View style={styles.logoContainer}>
                             <Image
-                                source={require("../assets/images/kazi.png")}
+                                source={require("../../assets/images/kazi.png")}
                                 style={styles.logo}
                                 resizeMode="contain"
                             />
@@ -262,7 +384,7 @@ export default function LoginScreen() {
                                         style={{
                                             fontSize: 24,
                                             fontWeight: "900",
-                                            color: "#000000ff",
+                                            color: "#00afa1ff",
                                         }}
                                     >
                                         FAST
@@ -271,179 +393,84 @@ export default function LoginScreen() {
                             </View>
                         </View>
 
-                        <Text style={styles.title}>Verify Phone Number</Text>
-                        <Text style={styles.subtitle}>
-                            Enter the 6-digit code sent to{"\n"}
-                            <Text style={styles.phoneNumberText}>
-                                {encryptPhoneNumber(phoneNumber)}
-                            </Text>
-                        </Text>
+                        <View style={styles.formContainer}>
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Verify Phone Number</Text>
 
-                        <View style={styles.otpContainer}>
-                            {[0, 1, 2, 3, 4, 5].map((index) => (
-                                <TextInput
-                                    key={index}
-                                    ref={(ref) => {
-                                        otpRefs.current[index] = ref;
-                                    }}
-                                    style={[styles.otpInput, otp[index] && styles.otpInputFilled]}
-                                    value={otp[index]}
-                                    onChangeText={(value) => handleOtpChange(index, value)}
-                                    onKeyPress={(e) => handleOtpKeyPress(index, e)}
-                                    keyboardType="number-pad"
-                                    maxLength={1}
-                                    editable={!otpLoading}
-                                    selectTextOnFocus
-                                    textAlign="center"
-                                    autoFocus={index === 0}
-                                />
-                            ))}
-                        </View>
+                                <View style={styles.phoneInputContainer}>
+                                    <View style={styles.countryCodeBox}>
+                                        <Text style={styles.countryCodeText}>+63</Text>
+                                    </View>
 
-                        <View style={styles.resendContainer}>
-                            <Text style={styles.resendText}>Didn't receive the code? </Text>
-                            <TouchableOpacity onPress={handleResendOtp} disabled={!canResend}>
-                                <Text
-                                    style={[
-                                        styles.resendLink,
-                                        !canResend && styles.resendLinkDisabled,
-                                    ]}
-                                >
-                                    {canResend ? "Resend OTP" : `Resend in ${resendTimer}s`}
+                                    <View style={styles.separator} />
+
+                                    <TextInput
+                                        style={styles.phoneInput}
+                                        placeholder="9XXXXXXXXX"
+                                        placeholderTextColor="#999"
+                                        value={formatPhoneDisplay(phoneNumber)}
+                                        onChangeText={(text) => {
+                                            const cleaned = text.replace(/\D/g, "").slice(0, 10);
+                                            setPhoneNumber(cleaned);
+                                        }}
+                                        keyboardType="phone-pad"
+                                        autoComplete="tel"
+                                        editable={!loading}
+                                        maxLength={12}
+                                        onSubmitEditing={handleSendOtp}
+                                        returnKeyType="send"
+                                    />
+                                </View>
+
+                                <Text style={styles.exampleText}>
+                                    Enter 10-digit number starting with 9 (e.g., 9123456789)
                                 </Text>
-                            </TouchableOpacity>
-                        </View>
+                            </View>
 
-                        <TouchableOpacity
-                            style={[styles.button, otpLoading && styles.buttonDisabled]}
-                            onPress={handleVerifyOtp}
-                            disabled={otpLoading}
-                        >
-                            {otpLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.buttonText}>Verify OTP</Text>
-                            )}
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.button,
+                                    loading && styles.buttonDisabled,
+                                    phoneNumber.replace(/\D/g, "").length !== 10 &&
+                                    styles.buttonDisabled,
+                                ]}
+                                onPress={handleSendOtp}
+                                disabled={loading || phoneNumber.replace(/\D/g, "").length !== 10}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.buttonText}>Send Verification Code</Text>
+                                )}
+                            </TouchableOpacity>
+
+                            <View style={styles.signInContainer}>
+                                <Text style={styles.signInText}>
+                                    If you already have an account
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.signInButton}
+                                    onPress={handleSignIn}
+                                >
+                                    <Text style={styles.signInButtonText}>Sign In</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        );
-    }
-
-    return (
-        <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-            <ScrollView
-                contentContainerStyle={styles.scrollContainer}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={styles.container}>
-                    <View style={styles.logoContainer}>
-                        <Image
-                            source={require("../assets/images/kazi.png")}
-                            style={styles.logo}
-                            resizeMode="contain"
-                        />
-                        <View style={{ flexDirection: "row" }}>
-                            <View>
-                                <Text
-                                    style={{
-                                        fontSize: 24,
-                                        fontWeight: "900",
-                                        color: "#00afa1ff",
-                                        marginRight: 2,
-                                    }}
-                                >
-                                    KAZIBU
-                                </Text>
-                            </View>
-                            <View>
-                                <Text
-                                    style={{
-                                        fontSize: 24,
-                                        fontWeight: "900",
-                                        color: "#00afa1ff",
-                                    }}
-                                >
-                                    FAST
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-
-                    <View style={styles.formContainer}>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Verify Phone Number</Text>
-
-                            <View style={styles.phoneInputContainer}>
-                                <View style={styles.countryCodeBox}>
-                                    <Text style={styles.countryCodeText}>+63</Text>
-                                </View>
-
-                                <View style={styles.separator} />
-
-                                <TextInput
-                                    style={styles.phoneInput}
-                                    placeholder="9XXXXXXXXX"
-                                    placeholderTextColor="#999"
-                                    value={formatPhoneDisplay(phoneNumber)}
-                                    onChangeText={(text) => {
-                                        const cleaned = text.replace(/\D/g, "").slice(0, 10);
-                                        setPhoneNumber(cleaned);
-                                    }}
-                                    keyboardType="phone-pad"
-                                    autoComplete="tel"
-                                    editable={!loading}
-                                    maxLength={12}
-                                    onSubmitEditing={handleSendOtp}
-                                    returnKeyType="send"
-                                />
-                            </View>
-
-                            <Text style={styles.exampleText}>
-                                Enter 10-digit number starting with 9 (e.g., 9123456789)
-                            </Text>
-                        </View>
-
-                        <TouchableOpacity
-                            style={[
-                                styles.button,
-                                loading && styles.buttonDisabled,
-                                phoneNumber.replace(/\D/g, "").length !== 10 &&
-                                styles.buttonDisabled,
-                            ]}
-                            onPress={handleSendOtp}
-                            disabled={loading || phoneNumber.replace(/\D/g, "").length !== 10}
-                        >
-                            {loading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.buttonText}>Send Verification Code</Text>
-                            )}
-                        </TouchableOpacity>
-
-                        <View style={styles.signInContainer}>
-                            <Text style={styles.signInText}>
-                                If you already have an account
-                            </Text>
-                            <TouchableOpacity
-                                style={styles.signInButton}
-                                onPress={handleSignIn}
-                            >
-                                <Text style={styles.signInButtonText}>Sign In</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#ffffffff',
+        paddingBottom: 40,
+        paddingTop: 30,
+    },
     scrollContainer: {
         flexGrow: 1,
     },
@@ -468,6 +495,7 @@ const styles = StyleSheet.create({
     logoContainer: {
         alignItems: "center",
         marginBottom: 35,
+        backgroundColor: "transparent",
     },
     logo: {
         width: 120,

@@ -1,17 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type SetupPinParams = {
   phone?: string;
@@ -84,80 +85,77 @@ export default function SetupPinScreen() {
   };
 
   const handleSubmit = async () => {
-  const pinString = pin.join("");
-  const confirmPinString = confirmPin.join("");
+    const pinString = pin.join("");
+    const confirmPinString = confirmPin.join("");
 
-  if (pinString.length !== 6) {
-    Alert.alert("Error", "Please enter a 6-digit PIN");
-    pinRefs.current[0]?.focus();
-    return;
-  }
+    if (pinString.length !== 6) {
+      Alert.alert("Error", "Please enter a 6-digit PIN");
+      pinRefs.current[0]?.focus();
+      return;
+    }
 
-  if (confirmPinString.length !== 6) {
-    Alert.alert("Error", "Please confirm your 6-digit PIN");
-    confirmPinRefs.current[0]?.focus();
-    return;
-  }
+    if (confirmPinString.length !== 6) {
+      Alert.alert("Error", "Please confirm your 6-digit PIN");
+      confirmPinRefs.current[0]?.focus();
+      return;
+    }
 
-  if (pinString !== confirmPinString) {
-    Alert.alert("Error", "PINs don't match");
-    setConfirmPin(["", "", "", "", "", ""]);
-    confirmPinRefs.current[0]?.focus();
-    return;
-  }
+    if (pinString !== confirmPinString) {
+      Alert.alert("Error", "PINs don't match");
+      setConfirmPin(["", "", "", "", "", ""]);
+      confirmPinRefs.current[0]?.focus();
+      return;
+    }
 
-  try {
-    setLoading(true);
-
-    const response = await fetch(
-      "https://staging.kazibufastnet.com/api/setup_pin",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mobile_number: phone,
-          pin: pinString,
-        }),
-      }
-    );
-
-    const text = await response.text();
-
-    let data: any;
     try {
-      data = JSON.parse(text);
-    } catch {
-      data = { message: text }; 
+      setLoading(true);
+
+      const response = await fetch(
+        "https://staging.kazibufastnet.com/api/setup_pin",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mobile_number: phone,
+            pin: pinString,
+          }),
+        }
+      );
+
+      const text = await response.text();
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text }; 
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to set PIN");
+      }
+
+      await AsyncStorage.setItem("phone_number", phone);
+
+      // Navigate to MPIN login page
+      router.replace({
+        pathname: "/(auth)/mpin-login",
+        params: { phone },
+      });
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to set PIN");
-    }
-
-    await AsyncStorage.setItem("phone_number", phone);
-
-    // Navigate to MPIN login page
-    router.replace({
-      pathname: "/mpin-login",
-      params: { phone },
-    });
-  } catch (err: any) {
-    Alert.alert("Error", err.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        {/* <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                    <Text style={styles.backButtonText}>←</Text>
-                </TouchableOpacity> */}
         <View style={styles.logoContainer}>
           <Image
-            source={require("../assets/images/kazi.png")}
+            source={require("../../assets/images/kazi.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -212,7 +210,7 @@ export default function SetupPinScreen() {
               {[0, 1, 2, 3, 4, 5].map((index) => (
                 <TextInput
                   key={`pin-${index}`}
-                  ref={(ref) => (pinRefs.current[index] = ref)}
+                  ref={(ref) => {pinRefs.current[index] = ref}}
                   style={[styles.pinInput, pin[index] && styles.pinInputFilled]}
                   value={showPin ? pin[index] : pin[index] ? "•" : ""}
                   onChangeText={(value) => handlePinChange(index, value, false)}
@@ -247,7 +245,7 @@ export default function SetupPinScreen() {
               {[0, 1, 2, 3, 4, 5].map((index) => (
                 <TextInput
                   key={`confirm-${index}`}
-                  ref={(ref) => (confirmPinRefs.current[index] = ref)}
+                  ref={(ref) => {confirmPinRefs.current[index] = ref}}
                   style={[
                     styles.pinInput,
                     confirmPin[index] && styles.pinInputFilled,
@@ -311,10 +309,18 @@ export default function SetupPinScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+   safeArea: {
+    flex: 1,
+    backgroundColor: '#f7f7f7ff',
+    paddingTop: 35,
+    paddingBottom: 40,
+
+  },
   scrollContainer: {
     flexGrow: 1,
   },

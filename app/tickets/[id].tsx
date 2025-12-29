@@ -1,16 +1,26 @@
+import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import {
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
-} from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
+import TicketActionButtons from '../../components/TicketActionButtons';
+
+interface TicketItem {
+    id: string;
+    ticketNumber: string;
+    accountNumber: string;
+    accountName: string;
+    installationAddress: string;
+    mobileNumber: string;
+    status: string;
+    type: string;
+    date: string;
+    subject: string;
+    latitude: string;
+    longitude: string;
+}
 
 export default function TicketDetails() {
     const { id } = useLocalSearchParams();
@@ -18,50 +28,90 @@ export default function TicketDetails() {
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
 
-    const handleBack = () => {
-        if (router.canGoBack()) {
-            router.back();
-        } else {
-            router.push("/(tech-tabs)/tickets");
-        }
-    };
-
+    const [ticket, setTicket] = useState<TicketItem | null>(null);
     const [refreshing, setRefreshing] = useState(false);
 
-    const onRefresh = useCallback(() => {
+    const handleBack = () => {
+        if (router.canGoBack()) router.back();
+        else router.push('/(tech-tabs)/tickets');
+    };
+
+    const mapUrl = `https://maps.google.com/maps?q=${ticket?.latitude},${ticket?.longitude}&z=18&output=embed`;
+
+    const fetchTicketDetails = useCallback(async () => {
+        if (!id) return;
+
         setRefreshing(true);
-        // Simulate fetching data
-        setTimeout(() => {
+        try {
+            const token = await getToken();
+            const response = await fetch(`https://staging.kazibufastnet.com/api/tech/tickets/view/${id}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            });
+
+            if (!response.ok) {
+                const errorDetails = await response.text();
+                throw new Error(`Failed to fetch ticket. Status: ${response.status}, Details: ${errorDetails}`);
+            }
+
+            const data = await response.json();
+            const t = data.ticket;
+
+            setTicket({
+                id: t.id?.toString() ?? '',
+                ticketNumber: t.ticket_number?.toString() ?? 'N/A',
+                accountNumber: t.subscription_id?.toString() ?? 'N/A',
+                accountName: t.client?.name ?? 'Unknown',
+                installationAddress: t.subscription.installation_address ?? 'N/A',
+                mobileNumber: t.client?.mobile_number ?? 'N/A',
+                status: t.status ? t.status.charAt(0).toUpperCase() + t.status.slice(1) : 'N/A',
+                type: t.type ? (t.type.toLowerCase() === 'repair' ? 'Repair' : 'Installation') : 'N/A',
+                date: t.created_at ?? new Date().toISOString(),
+                subject: t.subject ?? 'N/A',
+                latitude: t.subscription?.latitude,
+                longitude: t.subscription?.longitude,
+            });
+
+        } catch (error: any) {
+            console.error('Fetch ticket error:', error.message);
+        } finally {
             setRefreshing(false);
-        }, 1500);
-    }, []);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        fetchTicketDetails();
+    }, [fetchTicketDetails]);
+
+    const formatDateTime = (isoDate: string) => {
+        const date = new Date(isoDate);
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
+    };
 
     const cardMargin = 8;
     const screenPadding = 16;
-    const buttonHeight = 70;
     const getCardWidth = () => (width - screenPadding * 2 - cardMargin) / 2;
 
-    const ticket = {
-        id,
-        ticketNumber: '123123114124',
-        accountNumber: '12321342131',
-        accountName: 'John Smith',
-        installationAddress: 'Guiwanon, Tubigon, Bohol',
-        mobileNumber: '09508221851',
-        status: 'Open',
-        type: 'Repair',
-        date: 'Jan 14, 2025',
-        subject: 'Internet connection dropping intermittently.',
-    };
+    if (!ticket) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <ActivityIndicator size="large" color="#3498DB" style={{ marginTop: 50 }} />
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={handleBack}
-                    style={styles.backButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
+                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#2D3748" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>
@@ -70,14 +120,13 @@ export default function TicketDetails() {
                 <View style={{ width: 40 }} />
             </View>
 
+            {/* Content */}
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={[styles.content, { paddingBottom: buttonHeight + insets.bottom + 16 }]}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3498DB" />
-                }
+                contentContainerStyle={[styles.content, { paddingBottom: 76 + (insets.bottom || 16) }]}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchTicketDetails} tintColor="#3498DB" />}
             >
+                {/* Account Info */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account Information</Text>
                     <View style={styles.row}>
@@ -103,7 +152,7 @@ export default function TicketDetails() {
                     <View style={styles.row}>
                         <View style={[styles.card, { width: getCardWidth() }]}>
                             <Text style={styles.cardLabel}>DATE</Text>
-                            <Text style={styles.cardValue}>{ticket.date}</Text>
+                            <Text style={styles.cardValue}>{formatDateTime(ticket.date)}</Text>
                         </View>
                         <View style={[styles.card, { width: getCardWidth() }]}>
                             <Text style={styles.cardLabel}>TYPE</Text>
@@ -112,6 +161,7 @@ export default function TicketDetails() {
                     </View>
                 </View>
 
+                {/* Installation Address */}
                 <View style={styles.section}>
                     <View style={styles.fullCard}>
                         <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
@@ -119,6 +169,7 @@ export default function TicketDetails() {
                     </View>
                 </View>
 
+                {/* Subject */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Subject Details</Text>
                     <View style={styles.fullCard}>
@@ -126,16 +177,22 @@ export default function TicketDetails() {
                     </View>
                 </View>
 
-                <View style={[styles.stickyButton, { bottom: insets.bottom + 16 }]}>
-                    <TouchableOpacity style={styles.acceptButton}>
-                        <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
-                        <Text style={styles.acceptButtonText}>Accept Ticket</Text>
-                    </TouchableOpacity>
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Location on Map</Text>
+                    <WebView
+                        source={{ uri: 'https://staging.kazibufastnet.com/client/map/' + ticket.latitude + "/" + ticket.longitude }}
+                        style={styles.webview}
+                    />
                 </View>
+
+
+                {/* Action Buttons */}
+                <TicketActionButtons ticket={ticket} />
             </ScrollView>
         </SafeAreaView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
@@ -149,6 +206,10 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#E2E8F0',
     },
+    webview: {
+        height: 300, 
+    },
+
     backButton: { padding: 5, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', textAlign: 'center', flex: 1 },
     scrollView: { flex: 1 },
@@ -168,29 +229,8 @@ const styles = StyleSheet.create({
     },
     cardLabel: { fontSize: 11, color: '#718096', fontWeight: '600', textTransform: 'uppercase', marginBottom: 4 },
     cardValue: { fontSize: 15, fontWeight: '600', color: '#2D3748' },
-    fullCard: { backgroundColor: '#F7FAFC', borderRadius: 10, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', minHeight: 80 },
-    fullCardLabel: { fontSize: 11, color: '#718096', fontWeight: '600', textTransform: 'uppercase', marginBottom: 8 },
-    fullCardValue: { fontSize: 15, fontWeight: '500', color: '#2D3748', lineHeight: 22 },
-    subjectText: { fontSize: 15, color: '#4A5568', lineHeight: 22 },
-    stickyButton: {
-        position: 'absolute',
-        left: 16,
-        right: 16,
-    },
-    acceptButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#3498DB',
-        borderRadius: 10,
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        minHeight: 52,
-    },
-    acceptButtonText: { fontSize: 16, fontWeight: '600', color: '#fff', marginLeft: 10 },
+    fullCard: { backgroundColor: '#F7FAFC', borderRadius: 10, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+    fullCardLabel: { fontSize: 11, color: '#718096', fontWeight: '600', textTransform: 'uppercase', marginBottom: 6 },
+    fullCardValue: { fontSize: 15, fontWeight: '600', color: '#2D3748' },
+    subjectText: { fontSize: 14, color: '#2D3748', lineHeight: 20 },
 });

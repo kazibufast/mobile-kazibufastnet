@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Alert,
     Dimensions,
@@ -14,9 +14,8 @@ import {
     Vibration,
     View
 } from "react-native";
-import { setToken } from '../scripts/token';
-import { setUser } from '../scripts/user';
-
+import { setToken } from '../../scripts/token';
+import { setUser } from '../../scripts/user';
 
 const { width, height } = Dimensions.get("window");
 
@@ -36,22 +35,22 @@ export default function MpinLoginScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [currentPosition, setCurrentPosition] = useState(0);
     const [isVerifying, setIsVerifying] = useState(false);
-    const [shakeAnimation, setShakeAnimation] = useState(false);
+   
 
     const hasEnteredNumber = mpin.some(digit => digit !== "");
 
-    
+
     useEffect(() => {
-  const loadPhoneNumber = async () => {
-    if (params.phone) {
-      setPhoneNumber(params.phone as string);
-    } else {
-      const storedNumber = await AsyncStorage.getItem("phone_number");
-      if (storedNumber) setPhoneNumber(storedNumber);
-    }
-  };
-  loadPhoneNumber();
-}, []);
+        const loadPhoneNumber = async () => {
+            if (params.phone) {
+                setPhoneNumber(params.phone as string);
+            } else {
+                const storedNumber = await AsyncStorage.getItem("phone_number");
+                if (storedNumber) setPhoneNumber(storedNumber);
+            }
+        };
+        loadPhoneNumber();
+    }, []);
 
     const loginRequest = async (mobile_number: string, mpin: string) => {
         const url = "https://staging.kazibufastnet.com/api/login";
@@ -78,15 +77,18 @@ export default function MpinLoginScreen() {
                 setIsVerifying(false);
 
                 if (data.user.user_type.toLowerCase() === "technician") {
-                    router.push("/(tech-tabs)/home");
+                    if (data.user.status === 'active') {
+                        router.replace("/(tech-tabs)/home");
+                    } else {
+                        router.replace("/(time-in)/time-in")
+                    }
+
                 } else {
-                    router.push("/(tabs)/home");
+                    router.replace("/(client-tabs)/home");
                 }
             } else {
                 setIsVerifying(false);
                 setMessage(data.message);
-
-                triggerShakeAnimation();
                 resetMpinWithDelay();
             }
 
@@ -112,11 +114,6 @@ export default function MpinLoginScreen() {
         }
 
         setIsLoading(false);
-    };
-
-    const triggerShakeAnimation = () => {
-        setShakeAnimation(true);
-        setTimeout(() => setShakeAnimation(false), 600);
     };
 
     const resetMpinWithDelay = () => {
@@ -145,7 +142,6 @@ export default function MpinLoginScreen() {
             const nextPosition = currentPosition + 1;
             setCurrentPosition(nextPosition);
             if (nextPosition > 5) {
-
                 const enteredPin = newMpin.join("");
                 handleLogin(enteredPin);
             }
@@ -176,13 +172,24 @@ export default function MpinLoginScreen() {
         );
     };
 
-    const handleChangeNumber = () => {
+    const handleChangeNumber = async () => {
         Alert.alert(
             "Change Number",
             "Do you want to use a different phone number?",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "Yes", onPress: () => router.back() },
+                {
+                    text: "Yes",
+                    onPress: async () => {
+                        try {
+                            // Set the phone number to null in AsyncStorage
+                            await AsyncStorage.setItem("phone_number", '');
+                            router.replace('/')
+                        } catch (error) {
+                            console.error("Error clearing phone number:", error);
+                        }
+                    }
+                }
             ]
         );
     };
@@ -270,8 +277,8 @@ export default function MpinLoginScreen() {
         return (
             <View style={[
                 styles.mpinDotsContainer,
-                { gap: dotSpacing },
-                shakeAnimation && styles.shakeAnimation
+                { gap: dotSpacing }
+                
             ]}>
                 {[0, 1, 2, 3, 4, 5].map((index) => (
                     <View key={`dot-${index}`} style={styles.mpinDotContainer}>
@@ -331,7 +338,7 @@ export default function MpinLoginScreen() {
 
                 <View style={[styles.logoContainer, { marginBottom: scaleSize(20) }]}>
                     <Image
-                        source={require("../assets/images/kazi.png")}
+                        source={require("../../assets/images/kazi.png")}
                         style={[styles.logo, {
                             width: scaleSize(100),
                             height: scaleSize(100)
@@ -345,7 +352,7 @@ export default function MpinLoginScreen() {
 
                 {/* Phone Number Section */}
                 <View style={[styles.phoneSection, { marginBottom: scaleSize(30) }]}>
-                    <Text style={[styles.phoneNumber, { fontSize: scaleSize(18) }]}>{phoneNumber}</Text>
+                    <Text style={[styles.phoneNumber, { fontSize: scaleSize(18) }]}> +63{phoneNumber}</Text>
                     <TouchableOpacity onPress={handleChangeNumber} disabled={isVerifying}>
                         <Ionicons name="create-outline" size={scaleSize(22)} color={isVerifying ? "#666" : "#00AFA1"} />
                     </TouchableOpacity>
@@ -546,17 +553,6 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
 
-    shakeAnimation: {
-        animationKeyframes: {
-            '0%': { transform: [{ translateX: 0 }] },
-            '25%': { transform: [{ translateX: -10 }] },
-            '50%': { transform: [{ translateX: 10 }] },
-            '75%': { transform: [{ translateX: -10 }] },
-            '100%': { transform: [{ translateX: 0 }] },
-        },
-        animationDuration: '300ms',
-        animationIterationCount: 2,
-    },
 
     skeletonOverlay: {
         position: 'absolute',
@@ -566,7 +562,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(12, 24, 36, 0.8)',
+        backgroundColor: 'rgba(12, 24, 36, 0.😎',
         borderRadius: 10,
         zIndex: 10,
     },

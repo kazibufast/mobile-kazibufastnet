@@ -1,29 +1,84 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
+import { getToken } from '../../scripts/token';
+
 
 interface TicketItem {
   id: string;
   clientName: string;
   status: 'Open' | 'Pending' | 'Accepted' | 'Completed' | 'Closed';
-  type: 'Repair' | 'Installation';
+  type: 'Repair' | 'Installation' | null;
   subject: string;
   date: string;
 }
 
 const Ticket: React.FC = () => {
   const router = useRouter();
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [showSearch, setShowSearch] = useState<boolean>(false);
-  const [search, setSearch] = useState<string>("");
+  const [search, setSearch] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTickets = async () => {
+    setRefreshing(true);
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const response = await fetch('https://staging.kazibufastnet.com/api/tech/tickets', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorDetails = await response.text();
+        throw new Error(`Failed to fetch tickets. Status: ${response.status}, Details: ${errorDetails}`);
+      }
+
+      const data = await response.json();
+
+      const mappedTickets: TicketItem[] = data.tickets.map((t: any, index: number) => {
+        return {
+          id: t.id.toString(),
+          clientName: t.client?.name || 'Unknown',
+          status: (t.status.charAt(0).toUpperCase() + t.status.slice(1)) as TicketItem['status'],
+          type: t.type ? (t.type.toLowerCase() === 'repair' ? 'Repair' : 'Installation') : null,
+          subject: t.subject || 'No subject',
+          date: t.created_at || new Date().toISOString(),
+        };
+      });
+
+      setTickets(mappedTickets);
+    } catch (error: any) {
+      console.error('Fetch tickets error:', error.message);
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  };
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    fetchTickets();
+  }, []);
+
+  useEffect(() => {
+    fetchTickets();
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -31,7 +86,7 @@ const Ticket: React.FC = () => {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
@@ -40,60 +95,9 @@ const Ticket: React.FC = () => {
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     });
   };
-
-  const tickets: TicketItem[] = [
-    {
-      id: 'KAZ-1101',
-      clientName: 'John Smith',
-      status: 'Open',
-      type: 'Repair',
-      subject: 'Internet connection dropping intermittently',
-      date: new Date().toISOString(),
-    },
-    {
-      id: 'KAZ-1102',
-      clientName: 'Sarah Johnson',
-      status: 'Pending',
-      type: 'Installation',
-      subject: 'Slow internet speeds in downtown area',
-      date: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: 'KAZ-1103',
-      clientName: 'Robert Chen',
-      status: 'Completed',
-      type: 'Repair',
-      subject: 'Invoice discrepancy for December billing',
-      date: '2024-01-13T09:15:00',
-    },
-    {
-      id: 'KAZ-1104',
-      clientName: 'Maria Garcia',
-      status: 'Pending',
-      type: 'Repair',
-      subject: 'Router replacement needed',
-      date: '2024-01-12T16:20:00',
-    },
-    {
-      id: 'KAZ-1105',
-      clientName: 'David Wilson',
-      status: 'Accepted',
-      type: 'Installation',
-      subject: 'Upgrade to higher speed plan',
-      date: new Date().toISOString(),
-    },
-    {
-      id: 'KAZ-1106',
-      clientName: 'Lisa Thompson',
-      status: 'Closed',
-      type: 'Installation',
-      subject: 'New modem installation completed',
-      date: '2024-01-10T13:30:00',
-    }
-  ];
 
   const getStatusConfig = (status: TicketItem['status']) => {
     switch (status) {
@@ -113,134 +117,124 @@ const Ticket: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Header />
-      <View style={styles.contentContainer}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={true}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3498DB" />
-          }
-        >
-          <View style={styles.titleSection}>
-            <Text style={styles.mainTitle}>Tickets</Text>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      <View style={styles.container}>
+        <Header />
+        <View style={styles.contentContainer}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3498DB" />}
+          >
+            {/* Header */}
+            <View style={styles.titleSection}>
+              <Text style={styles.mainTitle}>Tickets</Text>
 
-            <View style={styles.searchWrapper}>
-              {!showSearch ? (
-                <TouchableOpacity
-                  style={styles.searchIconButton}
-                  onPress={() => setShowSearch(true)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="search-outline" size={22} color="#333" />
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.searchBar}>
-                  <Ionicons name="search-outline" size={18} color="#999" />
-                  <TextInput
-                    autoFocus
-                    value={search}
-                    onChangeText={(text: string) => setSearch(text)}
-                    placeholder="Search..."
-                    placeholderTextColor="#999"
-                    style={styles.searchInput}
-                    onBlur={() => setShowSearch(false)}
-                  />
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.ticketsContainer}>
-            {tickets
-              .filter(ticket =>
-                ticket.clientName.toLowerCase().includes(search.toLowerCase()) ||
-                ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
-                ticket.id.toLowerCase().includes(search.toLowerCase())
-              )
-              .map((ticket) => {
-                const statusConfig = getStatusConfig(ticket.status);
-                return (
-                  <TouchableOpacity
-                    key={ticket.id}
-                    style={styles.ticketCard}
-                    onPress={() => router.push(`/tickets/${ticket.id}`)}
-                  >
-                    <View style={styles.firstRow}>
-                      <View style={styles.clientInfo}>
-                        <Text style={styles.clientName} numberOfLines={1}>
-                          {ticket.clientName}
-                        </Text>
-                      </View>
-                      <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
-                        <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                          {ticket.status}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.subjectText} numberOfLines={2}>
-                      {ticket.subject}
-                    </Text>
-
-                    <View style={styles.metaRow}>
-                      <Text style={styles.metaText}>
-                        {formatDate(ticket.date)} • {getTime(ticket.date)}
-                      </Text>
-                      <View style={styles.typeBadge}>
-                        <Text style={styles.typeText}>{ticket.type}</Text>
-                      </View>
-                    </View>
+              <View style={styles.searchWrapper}>
+                {!showSearch ? (
+                  <TouchableOpacity style={styles.searchIconButton} onPress={() => setShowSearch(true)}>
+                    <Ionicons name="search-outline" size={22} color="#333" />
                   </TouchableOpacity>
-                );
-              })}
-          </View>
-        </ScrollView>
+                ) : (
+                  <View style={styles.searchBar}>
+                    <Ionicons name="search-outline" size={18} color="#999" />
+                    <TextInput
+                      autoFocus
+                      value={search}
+                      onChangeText={(text) => setSearch(text)}
+                      placeholder="Search..."
+                      placeholderTextColor="#999"
+                      style={styles.searchInput}
+                      onBlur={() => setShowSearch(false)}
+                    />
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Loading */}
+            {loading && <ActivityIndicator size="large" color="#3498DB" style={{ marginTop: 20 }} />}
+
+            {/* Tickets */}
+            <View style={styles.ticketsContainer}>
+              {tickets
+                .filter(
+                  (ticket) =>
+                    ticket.clientName.toLowerCase().includes(search.toLowerCase()) ||
+                    ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
+                    ticket.id.toLowerCase().includes(search.toLowerCase())
+                )
+                .map((ticket, index) => {
+                  const statusConfig = getStatusConfig(ticket.status);
+                  return (
+                    <TouchableOpacity
+                      key={`${ticket.id}-${index}`}
+                      style={styles.ticketCard}
+                      onPress={() => router.push(`/tickets/${ticket.id}`)}
+                    >
+                      <View style={styles.firstRow}>
+                        <View style={styles.clientInfo}>
+                          <Text style={styles.clientName} numberOfLines={1}>
+                            {ticket.clientName}
+                          </Text>
+                        </View>
+                        <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
+                          <Text style={[styles.statusText, { color: statusConfig.color }]}>{ticket.status}</Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.subjectText} numberOfLines={2}>
+                        {ticket.subject}
+                      </Text>
+
+                      <View style={styles.metaRow}>
+                        <Text style={styles.metaText}>
+                          {formatDate(ticket.date)} • {getTime(ticket.date)}
+                        </Text>
+                        {ticket.type && (
+                          <View style={styles.typeBadge}>
+                            <Text style={styles.typeText}>{ticket.type}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f7f7f7ff',
+    paddingTop: 25,
+  },
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   contentContainer: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 30 },
   titleSection: { flexDirection: 'row', alignItems: 'center', paddingTop: 20, paddingBottom: 15, gap: 12 },
   mainTitle: { fontSize: 22, fontWeight: 'bold', color: '#000' },
-  searchWrapper: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-
-  searchIconButton: {
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-
+  searchWrapper: { flex: 1, alignItems: 'flex-end' },
+  searchIconButton: { padding: 8, borderRadius: 20, borderWidth: 1, borderColor: '#e0e0e0' },
   searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    width: "100%",
+    borderColor: '#e0e0e0',
+    width: '100%',
   },
-
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: "#333333ff",
-  },
-
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#333' },
   ticketsContainer: { gap: 8 },
   ticketCard: { backgroundColor: '#fff', borderRadius: 8, padding: 14, borderWidth: 1, borderColor: '#e5e5e5', minHeight: 90 },
   firstRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },

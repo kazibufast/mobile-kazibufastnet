@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "kazi",
-    "slug": "kazi",
+    "name": "KazibuFast",
+    "slug": "KazibuFast",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/kazi.png",
-    "scheme": "kazi",
+    "scheme": [
+      "kazibufast"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kazibufast.kazi",
@@ -30,22 +31,22 @@
           "twitter",
           "twitterauth"
         ],
-        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication"
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication",
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera"
       }
     },
-    
     "android": {
-      "package": "com.yourcompany.kazi",
+      "package": "com.kazibufast.kazi",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/kazi.png"
-       
+        "foregroundImage": "./assets/images/applogo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGesture": false,
       "permissions": [
         "android.permission.CALL_PHONE",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "INTERNET",
+        "android.permission.CAMERA"
       ],
       "intentFilters": [
         {
@@ -65,12 +66,10 @@
         }
       ]
     },
-    
     "web": {
       "output": "static",
       "favicon": "./assets/images/kazi.png"
     },
-    
     "plugins": [
       "expo-router",
       [
@@ -84,12 +83,19 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "react-native-vision-camera",
+      "expo-web-browser"
     ],
-    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a36fca6e-b501-4a7a-bb97-8b99644a4231"
+      }
     }
   }
 }

@@ -1,15 +1,19 @@
+import {
+  Ionicons,
+  MaterialCommunityIcons
+} from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Dimensions,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import { getToken } from '../../scripts/token';
 import { getUser } from '../../scripts/user';
@@ -33,7 +37,6 @@ const Home: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
 
-
   // tickets
   const [openTickets, setOpenTickets] = useState(0);
   const [pendingTickets, setPendingTickets] = useState(0);
@@ -48,10 +51,10 @@ const Home: React.FC = () => {
   };
 
   const recentTickets = [
-    { id: 'KAZ-2021', client: 'John Doe', status: 'In Progress', time: '10:30 AM'},
-    { id: 'KAZ-2022', client: 'Sarah Smith', status: 'Assigned', time: '11:15 AM' },
-    { id: 'KAZ-2023', client: 'Mike Johnson', status: 'Completed', time: '9:00 AM' },
-    { id: 'KAZ-2024', client: 'Lisa Wang', status: 'Pending', time: '2:45 PM' },
+    { id: 'KAZ-2021', client: 'John Doe', status: 'In Progress', time: '10:30 AM', priority: 'High' },
+    { id: 'KAZ-2022', client: 'Sarah Smith', status: 'Assigned', time: '11:15 AM', priority: 'Medium' },
+    { id: 'KAZ-2023', client: 'Mike Johnson', status: 'Completed', time: '9:00 AM', priority: 'Low' },
+    { id: 'KAZ-2024', client: 'Lisa Wang', status: 'Pending', time: '2:45 PM', priority: 'Medium' },
   ];
 
   const getStatusColor = (status: string) => {
@@ -61,6 +64,16 @@ const Home: React.FC = () => {
       case 'Completed': return '#10B981';
       case 'Pending': return '#6B7280';
       default: return '#6B7280';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'In Progress': return 'clock';
+      case 'Assigned': return 'user-check';
+      case 'Completed': return 'check-circle';
+      case 'Pending': return 'pause-circle';
+      default: return 'file-text';
     }
   };
 
@@ -116,53 +129,45 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     fetchTickets();
-  }, []);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning,';
-    if (hour < 17) return 'Good afternoon,';
-    return 'Good evening,';
-  };
-
-  const firstName = user?.name?.split(' ')[0] + '!' || 'Technician';
-
-  useEffect(() => {
-    const updateDateTime = () => {
+    // Update time every minute
+    const interval = setInterval(() => {
       const now = new Date();
+      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setCurrentDate(now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }));
+    }, 60000);
 
-      setCurrentTime(
-        now.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-      );
-
-      setCurrentDate(
-        now.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })
-      );
-    };
-
-    updateDateTime(); // run immediately
-
-    const interval = setInterval(updateDateTime, 1000);
+    // Initial call
+    const now = new Date();
+    setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setCurrentDate(now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }));
 
     return () => clearInterval(interval);
   }, []);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
 
-  
-
-
+  const firstName = user?.name?.split(' ')[0] || 'Technician';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       <Header />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
@@ -173,113 +178,107 @@ const Home: React.FC = () => {
             onRefresh={onRefresh}
             tintColor="#00AFA1"
             colors={["#00AFA1"]}
+            progressBackgroundColor="#FFFFFF"
           />
         }
       >
 
+        {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <View style={styles.welcomeLeft}>
-            <Text
-              style={styles.greeting}
-              numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}
-            >
-              {getGreeting()}
-            </Text>
+          <View style={styles.welcomeHeader}>
+            <View>
+              <Text style={styles.greeting}>
+                {getGreeting()}
+              </Text>
+              <Text style={styles.name}>
+                {firstName}!
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.welcomeLeft}>
-            <Text
-              style={styles.name}
-              numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}
-            >
-            {firstName}
-            </Text>
-          </View>
+          <Text style={styles.dateText}>{currentDate}</Text>
 
-
-          <View style={styles.welcomeLeft}>
-            <Text
-              style={styles.currentTime}
-              numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}
-            >
-              {currentTime}
-            </Text>
-          </View>
-          <View style={styles.welcomeLeft}>
-            <Text
-              style={styles.currentDate}
-              numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}
-            >
-               {currentDate}
-            </Text>
-          </View>
-
-        
-         
-        </View>
-
-
-
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
-          <View style={styles.statsGrid}>
-            <View style={[styles.statCard, styles.openCard]}>
-              <View style={styles.statHeader}>
-
-                <Text style={styles.statNumber}>{stats.activeTickets}</Text>
-              </View>
-              <Text style={styles.statLabel}>Open</Text>
-              <Text style={styles.statSubText}>Need attention</Text>
-            </View>
-
-            <View style={[styles.statCard, styles.pendingCard]}>
-              <View style={styles.statHeader}>
-
-                <Text style={styles.statNumber}>{stats.pending}</Text>
-              </View>
-              <Text style={styles.statLabel}>Pending</Text>
-              <Text style={styles.statSubText}>Awaiting action</Text>
-            </View>
-
-            <View style={[styles.statCard, styles.completedCard]}>
-              <View style={styles.statHeader}>
-
-                <Text style={styles.statNumber}>{stats.completed}</Text>
-              </View>
-              <Text style={styles.statLabel}>Completed</Text>
-              <Text style={styles.statSubText}>Today's success</Text>
-            </View>
-
-            <View style={[styles.statCard, styles.closedCard]}>
-              <View style={styles.statHeader}>
-
-                <Text style={styles.statNumber}>{stats.closed}</Text>
-              </View>
-              <Text style={styles.statLabel}>Closed</Text>
-              <Text style={styles.statSubText}>Resolved tickets</Text>
-            </View>
+          <View style={styles.roleBadge}>
+            <MaterialCommunityIcons name="toolbox-outline" size={scaleSize(14)} color="#FFFFFF" />
+            <Text style={styles.roleText}>Technician</Text>
           </View>
         </View>
 
-        {/* Recent Tickets */}
+        {/* Quick Stats Cards */}
+        <View style={styles.quickStatsSection}>
+          <View style={styles.statsRow}>
+            <TouchableOpacity
+              style={[styles.quickStatCard, { backgroundColor: '#007AFF' }]}
+              onPress={() => router.push('/tickets?status=open')}
+            >
+              <View style={styles.statIconContainer}>
+                <MaterialCommunityIcons name="ticket-confirmation-outline" size={scaleSize(24)} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickStatNumber}>{stats.activeTickets}</Text>
+              <Text style={styles.quickStatLabel}>Open</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.quickStatCard, { backgroundColor: '#FF9500' }]}
+              onPress={() => router.push('/tickets?status=pending')}
+            >
+              <View style={styles.statIconContainer}>
+                <MaterialCommunityIcons name="clock-alert-outline" size={scaleSize(24)} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickStatNumber}>{stats.pending}</Text>
+              <Text style={styles.quickStatLabel}>Pending</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsRow}>
+            <TouchableOpacity
+              style={[styles.quickStatCard, { backgroundColor: '#34C759' }]}
+              onPress={() => router.push('/tickets?status=completed')}
+            >
+              <View style={styles.statIconContainer}>
+                <MaterialCommunityIcons name="check-circle-outline" size={scaleSize(24)} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickStatNumber}>{stats.completed}</Text>
+              <Text style={styles.quickStatLabel}>Completed</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.quickStatCard, { backgroundColor: '#8E8E93' }]}
+              onPress={() => router.push('/tickets?status=closed')}
+            >
+              <View style={styles.statIconContainer}>
+                <MaterialCommunityIcons name="archive-outline" size={scaleSize(24)} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickStatNumber}>{stats.closed}</Text>
+              <Text style={styles.quickStatLabel}>Closed</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+
+        {/* Recent Tickets Section */}
         <View style={styles.ticketsSection}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Recent Tickets</Text>
-              <Text style={styles.sectionSubtitle}>Last updated tickets</Text>
+              <View style={styles.sectionTitleRow}>
+                <MaterialCommunityIcons name="ticket-outline" size={scaleSize(20)} color="#1F2937" />
+                <Text style={styles.sectionTitle}>Recent Tickets</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Recently updated tickets</Text>
             </View>
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push('/tickets')}
             >
               <Text style={styles.viewAllText}>View All</Text>
+              <Ionicons name="arrow-forward" size={scaleSize(14)} color="#00AFA1" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.ticketsList}>
             {recentTickets.map((ticket, index) => {
               const statusColor = getStatusColor(ticket.status);
+              const priorityColor = getPriorityColor(ticket.priority);
               return (
                 <TouchableOpacity
                   key={index}
@@ -289,8 +288,16 @@ const Home: React.FC = () => {
                 >
                   <View style={styles.ticketHeader}>
                     <View style={styles.ticketIdContainer}>
+                      <MaterialCommunityIcons
+                        name={getStatusIcon(ticket.status)}
+                        size={scaleSize(18)}
+                        color={statusColor}
+                      />
                       <Text style={styles.ticketId}>{ticket.id}</Text>
-                    
+                      <View style={[styles.priorityBadge, { backgroundColor: priorityColor + '20' }]}>
+                        <View style={[styles.priorityDot, { backgroundColor: priorityColor }]} />
+                        <Text style={[styles.priorityText, { color: priorityColor }]}>{ticket.priority}</Text>
+                      </View>
                     </View>
                     <Text style={styles.ticketTime}>{ticket.time}</Text>
                   </View>
@@ -303,7 +310,8 @@ const Home: React.FC = () => {
                       <Text style={[styles.statusText, { color: statusColor }]}>{ticket.status}</Text>
                     </View>
                     <View style={styles.actionButton}>
-                      <Text style={styles.actionText}>View Details →</Text>
+                      <Text style={styles.actionText}>View Details</Text>
+                      <Ionicons name="chevron-forward" size={scaleSize(14)} color="#00AFA1" />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -312,16 +320,25 @@ const Home: React.FC = () => {
           </View>
         </View>
 
+        {/* Empty State for no tickets */}
+        {recentTickets.length === 0 && (
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="ticket-outline" size={scaleSize(64)} color="#E5E7EB" />
+            <Text style={styles.emptyStateTitle}>No Recent Tickets</Text>
+            <Text style={styles.emptyStateText}>Create your first ticket to get started</Text>
+          </View>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // Safe Area & Scroll
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    paddingTop: 25,
   },
   scrollView: {
     flex: 1,
@@ -331,186 +348,142 @@ const styles = StyleSheet.create({
   },
 
   // Welcome Section
-  welcomeContainer: {
+  welcomeSection: {
+    paddingHorizontal: scaleSize(20),
+    paddingTop: scaleSize(20),
+    paddingBottom: scaleSize(20),
+    backgroundColor: '#FFFFFF',
+    marginBottom: scaleSize(16),
+
+  },
+  welcomeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: scaleSize(8),
+  },
+  greeting: {
+    fontSize: scaleSize(16),
+    fontWeight: '500',
+    color: '#64748B',
+    marginBottom: scaleSize(4),
+  },
+  name: {
+    fontSize: scaleSize(28),
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  timeContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: scaleSize(12),
+    paddingVertical: scaleSize(6),
     borderRadius: scaleSize(20),
-    padding: scaleSize(24),
-    marginHorizontal: scaleSize(16),
-    marginTop: scaleSize(16),
+    gap: scaleSize(6),
+  },
+  timeText: {
+    fontSize: scaleSize(14),
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  dateText: {
+    fontSize: scaleSize(14),
+    color: '#94A3B8',
+    marginBottom: scaleSize(16),
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#00AFA1',
+    paddingHorizontal: scaleSize(12),
+    paddingVertical: scaleSize(6),
+    borderRadius: scaleSize(16),
+    gap: scaleSize(6),
+  },
+  roleText: {
+    fontSize: scaleSize(12),
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  // Quick Stats
+  quickStatsSection: {
+    paddingHorizontal: scaleSize(20),
     marginBottom: scaleSize(20),
-    elevation: 4,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: scaleSize(12),
+    marginBottom: scaleSize(12),
+  },
+  quickStatCard: {
+    flex: 1,
+    borderRadius: scaleSize(20),
+    padding: scaleSize(20),
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
-  },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-
-  welcomeSection: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    paddingHorizontal: scaleSize(18),
-    paddingVertical: scaleSize(16),
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: scaleSize(24),
-    borderBottomRightRadius: scaleSize(24),
-    marginBottom: scaleSize(12),
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-  },
-
-  welcomeLeft: {
-    flex: 1,
-    marginRight: scaleSize(10),
-  },
-
-  greeting: {
-    fontSize: scaleSize(15),
-    fontWeight: '700',
-    color: '#1A202C',
-  },
-  name: {
-    fontSize: scaleSize(20),
-    fontWeight: '700',
-    color: '#1A202C',
-  },
-  currentTime: {
-    fontSize: scaleSize(15),
-    fontWeight: '700',
-    color: '#1A202C',
-  },
-  currentDate: {
-    fontSize: scaleSize(9),
-    fontWeight: '700',
-    color: '#1A202C',
-  },
-
-  role: {
-    fontSize: scaleSize(14),
-    color: '#718096',
-    marginTop: scaleSize(2),
-  },
-
-  time: {
-    fontSize: scaleSize(21),
-    fontWeight: '800',
-    color: '#00AFA1',
-    lineHeight: scaleSize(30),
-  },
-
-  date: {
-    fontSize: scaleSize(12),
-    color: '#718096',
-    marginTop: scaleSize(2),
-  },
-
-  // Stats Section
-  statsSection: {
-    paddingHorizontal: scaleSize(16),
-    marginBottom: scaleSize(24),
-  },
-  sectionTitle: {
-    fontSize: scaleSize(20),
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: scaleSize(16),
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: scaleSize(12),
-  },
-  statCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: scaleSize(16),
-    padding: scaleSize(20),
-    width: '48%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: scaleSize(12),
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
     shadowRadius: 8,
+    elevation: 3,
   },
-  openCard: {
-    borderTopWidth: scaleSize(4),
-    borderTopColor: '#007bff',
-  },
-  pendingCard: {
-    borderTopWidth: scaleSize(4),
-    borderTopColor: '#F59E0B',
-  },
-  completedCard: {
-    borderTopWidth: scaleSize(4),
-    borderTopColor: '#10B981',
-  },
-  closedCard: {
-    borderTopWidth: scaleSize(4),
-    borderTopColor: '#6B7280',
-  },
-  statHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  statIconContainer: {
     marginBottom: scaleSize(12),
   },
-  statNumber: {
-    fontSize: scaleSize(32),
+  quickStatNumber: {
+    fontSize: scaleSize(28),
     fontWeight: '800',
-    color: '#1F2937',
-  },
-  statLabel: {
-    fontSize: scaleSize(16),
-    fontWeight: '600',
-    color: '#374151',
+    color: '#FFFFFF',
     marginBottom: scaleSize(4),
   },
-  statSubText: {
-    fontSize: scaleSize(12),
-    color: '#6B7280',
-    fontWeight: '500',
+  quickStatLabel: {
+    fontSize: scaleSize(14),
+    fontWeight: '600',
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
 
   // Tickets Section
   ticketsSection: {
-    paddingHorizontal: scaleSize(16),
-    marginBottom: scaleSize(24),
+    paddingHorizontal: scaleSize(20),
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: scaleSize(16),
+    marginBottom: scaleSize(20),
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scaleSize(8),
+    marginBottom: scaleSize(4),
+  },
+  sectionTitle: {
+    fontSize: scaleSize(18),
+    fontWeight: '700',
+    color: '#1F2937',
   },
   sectionSubtitle: {
     fontSize: scaleSize(14),
-    color: '#6B7280',
+    color: '#64748B',
     fontWeight: '500',
-    marginTop: scaleSize(4),
   },
   viewAllButton: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: scaleSize(16),
-    paddingVertical: scaleSize(10),
-    borderRadius: scaleSize(12),
-    borderWidth: scaleSize(1),
-    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scaleSize(4),
+    paddingHorizontal: scaleSize(12),
+    paddingVertical: scaleSize(6),
+    borderRadius: scaleSize(20),
   },
   viewAllText: {
     fontSize: scaleSize(14),
     fontWeight: '600',
-    color: '#374151',
+    color: '#00AFA1',
   },
   ticketsList: {
     gap: scaleSize(12),
@@ -518,12 +491,12 @@ const styles = StyleSheet.create({
   ticketCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: scaleSize(16),
-    padding: scaleSize(20),
-    elevation: 3,
+    padding: scaleSize(18),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
+    elevation: 2,
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -537,16 +510,16 @@ const styles = StyleSheet.create({
     gap: scaleSize(8),
   },
   ticketId: {
-    fontSize: scaleSize(16),
+    fontSize: scaleSize(15),
     fontWeight: '700',
     color: '#3B82F6',
   },
   priorityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scaleSize(10),
-    paddingVertical: scaleSize(4),
-    borderRadius: scaleSize(12),
+    paddingHorizontal: scaleSize(8),
+    paddingVertical: scaleSize(2),
+    borderRadius: scaleSize(10),
     gap: scaleSize(4),
   },
   priorityDot: {
@@ -555,18 +528,18 @@ const styles = StyleSheet.create({
     borderRadius: scaleSize(3),
   },
   priorityText: {
-    fontSize: scaleSize(11),
+    fontSize: scaleSize(10),
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   ticketTime: {
     fontSize: scaleSize(13),
-    color: '#6B7280',
+    color: '#94A3B8',
     fontWeight: '500',
   },
   ticketClient: {
-    fontSize: scaleSize(18),
+    fontSize: scaleSize(16),
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: scaleSize(16),
@@ -579,8 +552,8 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scaleSize(12),
-    paddingVertical: scaleSize(6),
+    paddingHorizontal: scaleSize(10),
+    paddingVertical: scaleSize(5),
     borderRadius: scaleSize(12),
     gap: scaleSize(6),
   },
@@ -590,14 +563,15 @@ const styles = StyleSheet.create({
     borderRadius: scaleSize(4),
   },
   statusText: {
-    fontSize: scaleSize(12),
+    fontSize: scaleSize(11),
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   actionButton: {
-    paddingVertical: scaleSize(8),
-    paddingHorizontal: scaleSize(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scaleSize(4),
   },
   actionText: {
     fontSize: scaleSize(14),
@@ -605,7 +579,25 @@ const styles = StyleSheet.create({
     color: '#00AFA1',
   },
 
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scaleSize(60),
+    paddingHorizontal: scaleSize(40),
+  },
+  emptyStateTitle: {
+    fontSize: scaleSize(18),
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: scaleSize(16),
+    marginBottom: scaleSize(8),
+  },
+  emptyStateText: {
+    fontSize: scaleSize(14),
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
 });
-
 
 export default Home;

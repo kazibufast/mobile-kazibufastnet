@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Header from '../../components/Header';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const AboutKazibufast: React.FC = () => {
     const router = useRouter();
@@ -27,18 +27,12 @@ const AboutKazibufast: React.FC = () => {
     
 
     return (
+         <SafeAreaView style={styles.safeArea} edges={[ 'left', 'right']}>
         <View style={styles.container}>
-            <Header />
 
             <View style={styles.contentContainer}>
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => router.back()}
-
-                    >
-                        <Ionicons name="arrow-back" size={24} color="#333" />
-                    </TouchableOpacity>
+                   
                     <View style={styles.logoContainer}>
                         <Image
                             source={require('../../assets/images/kazi.png')}
@@ -128,10 +122,17 @@ const AboutKazibufast: React.FC = () => {
                 </ScrollView>
             </View>
         </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
+     safeArea: {
+    flex: 1,
+    backgroundColor: '#f6f7f8ff',
+    paddingBottom: 40,
+    paddingTop: 30
+  },
     container: {
         flex: 1,
         backgroundColor: '#fff',

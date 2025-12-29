@@ -1,8 +1,10 @@
+import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+    Alert,
     Dimensions,
+    GestureResponderEvent,
     RefreshControl,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,6 +12,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from "../../components/Header";
 import { getToken } from '../../scripts/token';
 
@@ -22,7 +25,7 @@ export default function TeamScreen() {
     const [comment, setComment] = useState<string>("");
     const [team, setTeam] = useState<TeamInfo | null>(null);
     const [members, setMembers] = useState<Members[] | null>(null);
-
+    const { id } = useLocalSearchParams<{ id: string }>();
     const user = getToken();
 
     const onRefresh = useCallback(() => {
@@ -44,6 +47,7 @@ export default function TeamScreen() {
         shift: string;
         date: string;
         status: string;
+        id: number;
         members: Members[];
     };
     type Members = {
@@ -73,14 +77,13 @@ export default function TeamScreen() {
                 shift: data.team?.shift,
                 date: data.team?.date,
                 status: data.team?.status,
+                id: data.team?.id,
                 members: Array.isArray(data.team?.members)
                     ? data.team.members
                     : data.team?.members?.split(",").map((m: string) => m.trim()) || [],
 
             };
 
-
-            // Update state with the fetched team data
             setTeam(teamInfo);
 
         } catch (error: any) {
@@ -93,8 +96,57 @@ export default function TeamScreen() {
         fetchTeam();
     }, []);
 
+    const handleComment = async (comments: string) => {
+        const url = `https://staging.kazibufastnet.com/api/tech/team/comments/${team?.id}`;
+
+        try {
+            const token = await getToken();
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    comments: comments,
+                }),
+            });
+
+            // Check the response status
+            if (response.ok) {
+                const responseData = await response.json();
+                console.log('Reschedule successful:', responseData);
+                if (responseData.status === 'success') {
+                    // Handle success (navigate to a different page, etc.)
+
+                    Alert.alert('Successfully submitted comments!');
+
+                } else {
+                    console.error('Error rescheduling:', responseData.message || responseData);
+                    // Handle error (show error message, etc.)
+                }
+                // router.push('/(tech-tabs)/tickets');
+
+
+            } else {
+                const errorData = await response.json();
+                console.error('Error rescheduling:', errorData);
+                // Handle error (show error message, etc.)
+            }
+        } catch (error) {
+            console.error('Failed to send request:', error);
+            // Handle fetch error (network error, etc.)
+        }
+    };
+
+    const onPressHandler = (event: GestureResponderEvent) => {
+        handleComment(comment);
+
+        setComment('');
+    }
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
             <Header />
 
             <ScrollView
@@ -190,7 +242,7 @@ export default function TeamScreen() {
                                 styles.submitButton,
                                 !comment.trim() && styles.submitButtonDisabled,
                             ]}
-                            onPress={handleSaveComment}
+                            onPress={onPressHandler}
                             disabled={!comment.trim()}
                             activeOpacity={0.8}
                         >
@@ -198,15 +250,17 @@ export default function TeamScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-
-
-
             </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#f7f7f7ff',
+        paddingTop: 25,
+    },
     container: {
         flex: 1,
         backgroundColor: "#F8FAFC"
@@ -262,19 +316,10 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
 
-
-
-    // Info Card
     infoCard: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 10,
-        padding: 20,
+        padding: 10,
         marginBottom: 16,
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
+      
     },
     cardTitle: {
         fontSize: 18,

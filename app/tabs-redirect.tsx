@@ -16,5 +16,5 @@ export default function TabsRedirect() {
   if (!userType) return null; // or a loading spinner
 
   // Redirect based on type
-  return userType === 'technician' ? <Redirect href="(tech-tabs)/home" /> : <Redirect href="(tabs)/home" />;
+  return userType === 'technician' ? <Redirect href="(tech-tabs)/home" /> : <Redirect href="(client-tabs)/home" />;
 }

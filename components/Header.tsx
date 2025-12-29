@@ -110,7 +110,7 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         <View style={[styles.headerContainer, { height: responsive.height }]}>
 
           <Pressable onPress={() => router.push('/home')}>
@@ -182,8 +182,6 @@ const Header: React.FC = () => {
           </Pressable>
         </View>
       </Modal>
-
-
     </>
   );
 };
@@ -191,13 +189,16 @@ const Header: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: '#0C1824',
+   
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0C1824',
     paddingHorizontal: 16,
+    padding: 25,
     justifyContent: 'space-between',
+
   },
   header: {
     flexDirection: 'row',

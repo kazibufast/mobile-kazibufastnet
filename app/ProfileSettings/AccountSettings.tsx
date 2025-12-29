@@ -1,207 +1,285 @@
+import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Header from '../../components/Header';
+import { Alert, GestureResponderEvent, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getUser } from '../../scripts/user';
 
 const AccountSettings: React.FC = () => {
   const router = useRouter();
   const user = getUser();
   const [userData, setUserData] = useState({
-    fullName: 'Mono User',
-    email: 'mono@kazibufast.com',
-    phone: '09508221851',
-    address: 'Centro Ingud Bohol',
+    fullName: user?.name,
+    email: user?.email,
+    phone: user?.mobile_number,
+    address: user?.address,
   });
 
   const [isEditing, setIsEditing] = useState(false);
-
-  const handleSave = () => {
-    Alert.alert('Success', 'Account settings updated successfully!');
-    setIsEditing(false);
-  };
 
   const handleChange = (field: string, value: string) => {
     setUserData(prev => ({ ...prev, [field]: value }));
   };
 
+  const resetPassword = () => {
+    Alert.alert(
+      'Are you sure you want to reset your password?',
+      '', 
+      [
+        {
+          text: 'Cancel', 
+          style: 'cancel', 
+        },
+        {
+          text: 'OK', // Confirm button
+          onPress: () => {
+            router.push({
+              pathname: "/(auth)/setup-pin",
+              params: {
+                phone: userData?.phone,
+                verified: "true",
+              },
+            });
+          },
+        },
+      ],
+      { cancelable: false }
+    )
+  }
+
+
+  const handleUpdate = async (name: string, email: string, address: string, phoneNumber: string) => {
+    const url = `https://staging.kazibufastnet.com/api/tech/profile/update/${user?.id}`;
+
+    try {
+      const token = await getToken();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          address: address,
+          phoneNumber: phoneNumber,
+        }),
+      });
+
+      // Check the response status
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('Reschedule successful:', responseData);
+        if (responseData.status === 'success') {
+          // Handle success (navigate to a different page, etc.)
+
+          Alert.alert('Successfully update!');
+
+          router.push('/ProfileSettings/AccountSettings');
+
+        } else {
+          console.error('Error rescheduling:', responseData.message || responseData);
+          // Handle error (show error message, etc.)
+        }
+        // router.push('/(tech-tabs)/tickets');
+
+
+      } else {
+        const errorData = await response.json();
+        console.error('Error rescheduling:', errorData);
+        // Handle error (show error message, etc.)
+      }
+    } catch (error) {
+      console.error('Failed to send request:', error);
+      // Handle fetch error (network error, etc.)
+    }
+  };
+
+
+  const onPressHandler = (event: GestureResponderEvent) => {
+    handleUpdate(userData.fullName, userData.email, userData.address, userData.phone);
+
+  }
+
+
+
+
   return (
-    <View style={styles.container}>
-      <Header />
+    <SafeAreaView style={styles.safeArea} edges={[ 'left', 'right']}>
+      <View style={styles.container}>
 
 
-      <View style={styles.contentContainer}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentContainer}>
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
 
-        <View style= {{flexDirection:'row', justifyContent: 'center', alignItems: 'center'}}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#333" />
-            <Text ></Text>
-          </TouchableOpacity>
-
-          <View style={styles.header}>
-
-            <Text style={styles.headerTitle}>Account Settings</Text>
-            <Text style={styles.headerSubtitle}>Manage your personal information</Text>
-          </View>
-          </View>
-
-          <View style={styles.formContainer}>
-            {/* Full Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{user?.name}</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={userData.fullName}
-                  onChangeText={(text) => handleChange('fullName', text)}
-                  placeholder="Enter your full name"
-                />
-              ) : (
-                <Text style={styles.value}>{userData.fullName}</Text>
-              )}
-            </View>
-
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={userData.email}
-                  onChangeText={(text) => handleChange('email', text)}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              ) : (
-                <Text style={styles.value}>{userData.email}</Text>
-              )}
-            </View>
-
-            {/* Phone */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={userData.phone}
-                  onChangeText={(text) => handleChange('phone', text)}
-                  placeholder="Enter your phone number"
-                  keyboardType="phone-pad"
-                />
-              ) : (
-                <Text style={styles.value}>{userData.phone}</Text>
-              )}
-            </View>
-
-            {/* Address */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Address</Text>
-              {isEditing ? (
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={userData.address}
-                  onChangeText={(text) => handleChange('address', text)}
-                  placeholder="Enter your address"
-                  multiline
-                  numberOfLines={3}
-                />
-              ) : (
-                <Text style={styles.value}>{userData.address}</Text>
-              )}
-            </View>
-
-            {/* Account ID (Read Only) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Account Number</Text>
-              <Text style={styles.value}>ACC-2023-001</Text>
-            </View>
-
-            {/* Member Since (Read Only) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Member Since</Text>
-              <Text style={styles.value}>January 2023</Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            {isEditing ? (
-              <>
-                <TouchableOpacity
-                  style={[styles.button, styles.saveButton]}
-                  onPress={handleSave}
-                >
-                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                  <Text style={styles.buttonText}>Save Changes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={() => setIsEditing(false)}
-                >
-                  <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
               <TouchableOpacity
-                style={[styles.button, styles.editButton]}
-                onPress={() => setIsEditing(true)}
+                style={styles.backButton}
+                onPress={() => router.back()}
               >
-                <Ionicons name="create-outline" size={20} color="#fff" />
-                <Text style={styles.buttonText}>Edit Profile</Text>
+
               </TouchableOpacity>
-            )}
-          </View>
 
-          {/* Security Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Security</Text>
+              <View style={styles.header}>
 
-            <TouchableOpacity style={styles.securityItem}>
-              <View style={styles.securityLeft}>
-                <Ionicons name="key-outline" size={22} color="#00afa1ff" />
-                <View style={styles.securityTextContainer}>
-                  <Text style={styles.securityTitle}>Change Password</Text>
-                  <Text style={styles.securityDescription}>Update your login password</Text>
-                </View>
+                <Text style={styles.headerTitle}>Account Settings</Text>
+                <Text style={styles.headerSubtitle}>Manage your personal information</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity style={styles.securityItem}>
-              <View style={styles.securityLeft}>
-                <Ionicons name="shield-checkmark-outline" size={22} color="#00afa1ff" />
-                <View style={styles.securityTextContainer}>
-                  <Text style={styles.securityTitle}>Two-Factor Authentication</Text>
-                  <Text style={styles.securityDescription}>Add an extra layer of security</Text>
-                </View>
+            <View style={styles.formContainer}>
+              {/* Full Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{user?.name}</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.input}
+                    value={userData.fullName}
+                    onChangeText={(text) => handleChange('fullName', text)}
+                    placeholder="Enter your full name"
+                  />
+                ) : (
+                  <Text style={styles.value}>{userData.fullName}</Text>
+                )}
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+
+              {/* Email */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email Address</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.input}
+                    value={userData.email}
+                    onChangeText={(text) => handleChange('email', text)}
+                    placeholder="Enter your email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                ) : (
+                  <Text style={styles.value}>{userData.email}</Text>
+                )}
+              </View>
+
+              {/* Phone */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone Number</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.input}
+                    value={userData.phone}
+                    onChangeText={(text) => handleChange('phone', text)}
+                    placeholder="Enter your phone number"
+                    keyboardType="phone-pad"
+                  />
+                ) : (
+                  <Text style={styles.value}>{userData.phone}</Text>
+                )}
+              </View>
+
+              {/* Address */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Address</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={userData.address}
+                    onChangeText={(text) => handleChange('address', text)}
+                    placeholder="Enter your address"
+                    multiline
+                    numberOfLines={3}
+                  />
+                ) : (
+                  <Text style={styles.value}>{userData.address}</Text>
+                )}
+              </View>
+
+              {/* Account ID (Read Only) */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Account Number</Text>
+                <Text style={styles.value}>ACC-2023-001</Text>
+              </View>
+
+              {/* Member Since (Read Only) */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Member Since</Text>
+                <Text style={styles.value}>January 2023</Text>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.buttonContainer}>
+              {isEditing ? (
+                <>
+                  <TouchableOpacity
+                    style={[styles.button, styles.saveButton]}
+                    onPress={onPressHandler}
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Save Changes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.cancelButton]}
+                    onPress={() => setIsEditing(false)}
+                  >
+                    <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.button, styles.editButton]}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <Ionicons name="create-outline" size={20} color="#fff" />
+                  <Text style={styles.buttonText}>Edit Profile</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Security Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Security</Text>
+
+              <TouchableOpacity style={styles.securityItem} onPress={resetPassword}>
+                <View style={styles.securityLeft}>
+                  <Ionicons name="key-outline" size={22} color="#00afa1ff" />
+                  <View style={styles.securityTextContainer}>
+                    <Text style={styles.securityTitle}>Reset Password</Text>
+
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+
+
+            </View>
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f6f7f8ff',
+    paddingBottom: 40,
+    paddingTop: 30
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
 
-backButton: {
-  position: 'absolute',
-  left: 0,
-  zIndex: 10,
-  padding: 8,
-},
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+    padding: 8,
+  },
   contentContainer: {
     flex: 1,
   },
