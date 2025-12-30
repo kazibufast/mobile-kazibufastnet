@@ -108,94 +108,104 @@ export default function TicketDetails() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#2D3748" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>
-                    Ticket Details
-                </Text>
-                <View style={{ width: 40 }} />
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#2D3748" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle} numberOfLines={1}>
+                        Ticket Details
+                    </Text>
+                    <View style={{ width: 40 }} />
+                </View>
+
+                {/* Content */}
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={[styles.content, { paddingBottom: 76 + (insets.bottom || 16) }]}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchTicketDetails} tintColor="#3498DB" />}
+                >
+                    {/* Account Info */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Account Information</Text>
+                        <View style={styles.row}>
+                            <View style={[styles.card, { width: getCardWidth() }]}>
+                                <Text style={styles.cardLabel}>TICKET NUMBER</Text>
+                                <Text style={styles.cardValue}>{ticket.ticketNumber}</Text>
+                            </View>
+                            <View style={[styles.card, { width: getCardWidth() }]}>
+                                <Text style={styles.cardLabel}>ACCOUNT NUMBER</Text>
+                                <Text style={styles.cardValue}>{ticket.accountNumber}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.row}>
+                            <View style={[styles.card, { width: getCardWidth() }]}>
+                                <Text style={styles.cardLabel}>ACCOUNT NAME</Text>
+                                <Text style={styles.cardValue}>{ticket.accountName}</Text>
+                            </View>
+                            <View style={[styles.card, { width: getCardWidth() }]}>
+                                <Text style={styles.cardLabel}>MOBILE NUMBER</Text>
+                                <Text style={styles.cardValue}>{ticket.mobileNumber}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.row}>
+                            <View style={[styles.card, { width: getCardWidth() }]}>
+                                <Text style={styles.cardLabel}>DATE</Text>
+                                <Text style={styles.cardValue}>{formatDateTime(ticket.date)}</Text>
+                            </View>
+                            <View style={[styles.card, { width: getCardWidth() }]}>
+                                <Text style={styles.cardLabel}>TYPE</Text>
+                                <Text style={styles.cardValue}>{ticket.type}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Installation Address */}
+                    <View style={styles.section}>
+                        <View style={styles.fullCard}>
+                            <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
+                            <Text style={styles.fullCardValue}>{ticket.installationAddress}</Text>
+                        </View>
+                    </View>
+
+                    {/* Subject */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Subject Details</Text>
+                        <View style={styles.fullCard}>
+                            <Text style={styles.subjectText}>{ticket.subject}</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Location on Map</Text>
+                        <WebView
+                            source={{ uri: 'https://staging.kazibufastnet.com/client/map/' + ticket.latitude + "/" + ticket.longitude }}
+                            style={styles.webview}
+                        />
+                    </View>
+
+
+                    {/* Action Buttons */}
+                    <TicketActionButtons ticket={ticket} />
+                </ScrollView>
             </View>
-
-            {/* Content */}
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={[styles.content, { paddingBottom: 76 + (insets.bottom || 16) }]}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchTicketDetails} tintColor="#3498DB" />}
-            >
-                {/* Account Info */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account Information</Text>
-                    <View style={styles.row}>
-                        <View style={[styles.card, { width: getCardWidth() }]}>
-                            <Text style={styles.cardLabel}>TICKET NUMBER</Text>
-                            <Text style={styles.cardValue}>{ticket.ticketNumber}</Text>
-                        </View>
-                        <View style={[styles.card, { width: getCardWidth() }]}>
-                            <Text style={styles.cardLabel}>ACCOUNT NUMBER</Text>
-                            <Text style={styles.cardValue}>{ticket.accountNumber}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={[styles.card, { width: getCardWidth() }]}>
-                            <Text style={styles.cardLabel}>ACCOUNT NAME</Text>
-                            <Text style={styles.cardValue}>{ticket.accountName}</Text>
-                        </View>
-                        <View style={[styles.card, { width: getCardWidth() }]}>
-                            <Text style={styles.cardLabel}>MOBILE NUMBER</Text>
-                            <Text style={styles.cardValue}>{ticket.mobileNumber}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={[styles.card, { width: getCardWidth() }]}>
-                            <Text style={styles.cardLabel}>DATE</Text>
-                            <Text style={styles.cardValue}>{formatDateTime(ticket.date)}</Text>
-                        </View>
-                        <View style={[styles.card, { width: getCardWidth() }]}>
-                            <Text style={styles.cardLabel}>TYPE</Text>
-                            <Text style={styles.cardValue}>{ticket.type}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Installation Address */}
-                <View style={styles.section}>
-                    <View style={styles.fullCard}>
-                        <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
-                        <Text style={styles.fullCardValue}>{ticket.installationAddress}</Text>
-                    </View>
-                </View>
-
-                {/* Subject */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Subject Details</Text>
-                    <View style={styles.fullCard}>
-                        <Text style={styles.subjectText}>{ticket.subject}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Location on Map</Text>
-                    <WebView
-                        source={{ uri: 'https://staging.kazibufastnet.com/client/map/' + ticket.latitude + "/" + ticket.longitude }}
-                        style={styles.webview}
-                    />
-                </View>
-
-
-                {/* Action Buttons */}
-                <TicketActionButtons ticket={ticket} />
-            </ScrollView>
         </SafeAreaView>
     );
 }
 
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#00AF9F',
+        paddingTop: 30
+    },
+    container: {
+        flex: 1,
+        backgroundColor: '#ffffffff',
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -207,8 +217,9 @@ const styles = StyleSheet.create({
         borderBottomColor: '#E2E8F0',
     },
     webview: {
-        height: 300, 
+        height: 300,
     },
+
 
     backButton: { padding: 5, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', textAlign: 'center', flex: 1 },

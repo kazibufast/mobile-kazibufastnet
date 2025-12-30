@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "KazibuFast",
-    "slug": "KazibuFast",
+    "name": "KazibuFastTech",
+    "owner": "joshuasalabe",
+    "slug": "kazibu",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/kazi.png",
@@ -39,7 +40,7 @@
       "package": "com.kazibufast.kazi",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/applogo.png"
+        "foregroundImage": "./assets/images/kazi.png"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
@@ -94,7 +95,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a36fca6e-b501-4a7a-bb97-8b99644a4231"
+        "projectId": "4f59d715-1fc9-40de-a77b-f3eed42c4772"
       }
     }
   }

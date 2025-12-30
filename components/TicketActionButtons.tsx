@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -30,7 +32,7 @@ interface TicketItem {
     installationAddress: string;
     mobileNumber: string;
     status: TicketStatus;
-    type: string;
+    type?: string;
     date: string;
     subject: string;
     pictureCause: string;
@@ -46,14 +48,26 @@ const TicketActionButtons: React.FC = () => {
     const [ticket, setTicket] = useState<TicketItem | null>(null);
 
     const [remarks, setRemarks] = useState('');
+    const [deviceUse, setDeviceUse] = useState('');  // Device use for wireless
+    const [ipAddress, setIpAddress] = useState('');  // IP Address
+    const [macAddress, setMacAddress] = useState(''); // Mac Address
+    const [pppoeName, setPppoeName] = useState('');   // PPPOE Name for wireless
+    const [lcpNumber, setLcpNumber] = useState('');    // LCP number for wired
+    const [napNumber, setNapNumber] = useState('');    // NAP number for wired
+    const [portNumber, setPortNumber] = useState('');  // Port number for wired
+    const [tagNumber, setTagNumber] = useState('');    // Tag number for wired
+    const [connectionType, setConnectionType] = useState('');
+    const [vlanId, setVlanId] = useState('');
     const [location, setLocation] = useState('');
     const [pictureCause, setPictureCause] = useState<string | null>(null);
     const [pictureReading, setPictureReading] = useState<string | null>(null);
+    const [installationDate, setInstallationDate] = useState(new Date()); // Default date
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const [isCompleted, setIsCompleted] = useState(false);  // To track completion status
 
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const [selectedImage, setSelectedImage] = useState<string | null>(null); // State to store the selected image
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const handleImageClick = (imageUrl: string) => {
         setSelectedImage(imageUrl);
@@ -245,6 +259,26 @@ const TicketActionButtons: React.FC = () => {
             formData.append('remarks', remarks);
             formData.append('location', location);
 
+            formData.append('device_use', deviceUse);
+            formData.append('ip_address', ipAddress);
+            formData.append('mac_address', macAddress);
+            formData.append('installation_date', installationDate.toLocaleDateString());
+            formData.append('type', connectionType);
+
+            // Append PPPOE Name for wireless
+            if (connectionType === 'wireless') {
+                formData.append('pppoe_name', pppoeName);
+            }
+
+            // Append fields for wired connection (LCP number, NAP number, etc.)
+            if (connectionType === 'wired') {
+                formData.append('lcp_number', lcpNumber);
+                formData.append('nap_number', napNumber);
+                formData.append('port_number', portNumber);
+                formData.append('tag_number', tagNumber);
+                formData.append('vlan_id', vlanId);
+            }
+
             const appendImage = (fieldName: string, uri: string | null) => {
                 if (!uri) return;
 
@@ -257,6 +291,7 @@ const TicketActionButtons: React.FC = () => {
                     uri,
                     name: filename,
                     type,
+
                 } as any);
             };
 
@@ -294,6 +329,69 @@ const TicketActionButtons: React.FC = () => {
     };
 
 
+    //handle accept and start work
+    const handleAcceptAndStartWork = async () => {
+        try {
+            const token = await getToken();
+
+            await fetch(
+                `https://staging.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                    },
+                }
+            );
+
+            setStatus('in_progress');
+            Alert.alert('Started', 'Work started');
+        } catch {
+            Alert.alert('Error', 'Failed to start work');
+        }
+    };
+    const ImageMessage = (ticket: TicketItem | null): string => {
+        if (ticket === null || ticket.type === undefined) {
+            return "No Ticket";
+        }
+
+        // Now we can safely access ticket.type
+        const type = ticket.type;
+        if (type === 'repair') {
+            return "Picture-Cause";
+        } else {
+            return "Picture of Client/Speed Test";
+        }
+    };
+
+    const handleConnectionTypeChange = (itemValue: string) => {
+        setConnectionType(itemValue);  // Set the selected connection type
+        // Reset fields based on the selected connection type
+        if (itemValue === 'wireless') {
+            setDeviceUse('');  // Reset wireless-specific fields
+            setPppoeName('');
+        } else if (itemValue === 'wired') {
+            setLcpNumber('');  // Reset wired-specific fields
+            setNapNumber('');
+            setPortNumber('');
+            setTagNumber('');
+            setVlanId('');
+        }
+    };
+
+    const onDateChange = (event, selectedDate) => {
+        const currentDate = selectedDate || installationDate;
+        setShowDatePicker(false); // Close date picker after selecting
+        setInstallationDate(currentDate); // Set the selected date
+    };
+
+    console.log("hi " + ticket?.type);
+    
+
+
+
+
     return (
         <View style={styles.actionButtonsContainer}>
             {status === 'pending' && !isCompleted && (
@@ -306,9 +404,23 @@ const TicketActionButtons: React.FC = () => {
                             onPress={handleAccept}
                             style={styles.flexButton}
                         />
+
+
+
                     </View>
+
+                    <View style={{ marginTop: 10 }}>
+                        <TicketButton
+                            label="Accept & Start Work"
+                            onPress={handleAcceptAndStartWork}
+                            style={styles.acceptButton}
+                        />
+                    </View>
+
                 </View>
+
             )}
+
 
             {status === 'accepted' && !isCompleted && (
                 <View style={styles.acceptedContainer}>
@@ -333,6 +445,163 @@ const TicketActionButtons: React.FC = () => {
                     <Text style={styles.completionSubtitle}>
                         Fill in the required details to complete this ticket
                     </Text>
+
+
+                    {ticket?.type === 'installation' && (
+                        <>
+                            {/* Installation Date Section */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.inputLabel}>Installation Date</Text>
+                                <TouchableOpacity
+                                    style={styles.input}
+                                    onPress={() => setShowDatePicker(true)}
+                                >
+                                    <Text style={styles.inputText}>
+                                        {installationDate ? installationDate.toLocaleDateString() : 'Select a date'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {/* Show date picker if required */}
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={installationDate}
+                                        mode="date"
+                                        display="default"
+                                        onChange={onDateChange}
+                                    />
+                                )}
+                            </View>
+
+                            {/* Connection Type Section */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.inputLabel}>Connection Type</Text>
+                                <Picker
+                                    selectedValue={connectionType}
+                                    onValueChange={handleConnectionTypeChange}
+                                    style={[styles.input, styles.dropdown]}
+                                >
+                                    <Picker.Item label="Select connection type" value="" />
+                                    <Picker.Item label="Wireless" value="wireless" />
+                                    <Picker.Item label="Wired" value="wired" />
+                                </Picker>
+                            </View>
+
+                            {/* Wireless Specific Fields */}
+                            {connectionType === 'wireless' && (
+                                <>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>Device Use</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter device use"
+                                            value={deviceUse}
+                                            onChangeText={setDeviceUse}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>IP Address</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter IP Address"
+                                            value={ipAddress}
+                                            onChangeText={setIpAddress}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>Mac Address</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter MAC Address"
+                                            value={macAddress}
+                                            onChangeText={setMacAddress}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>PPPOE Name</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter PPPOE Name"
+                                            value={pppoeName}
+                                            onChangeText={setPppoeName}
+                                        />
+                                    </View>
+                                </>
+                            )}
+
+                            {/* Wired Specific Fields */}
+                            {connectionType === 'wired' && (
+                                <>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>IP Address</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter IP Address"
+                                            value={ipAddress}
+                                            onChangeText={setIpAddress}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>Mac Address</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter MAC Address"
+                                            value={macAddress}
+                                            onChangeText={setMacAddress}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>LCP Number</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter LCP Number"
+                                            value={lcpNumber}
+                                            onChangeText={setLcpNumber}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>NAP Number</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter NAP Number"
+                                            value={napNumber}
+                                            onChangeText={setNapNumber}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>Port Number</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter Port Number"
+                                            value={portNumber}
+                                            onChangeText={setPortNumber}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>Tag Number</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter Tag Number"
+                                            value={tagNumber}
+                                            onChangeText={setTagNumber}
+                                        />
+                                    </View>
+                                    <View style={styles.formSection}>
+                                        <Text style={styles.inputLabel}>VLAN ID</Text>
+                                        <TextInput
+                                            style={[styles.input, styles.textArea]}
+                                            placeholder="Enter VLAN ID"
+                                            value={vlanId}
+                                            onChangeText={setVlanId}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                        </>
+                    )}
+
+
+
+
+
 
                     <View style={styles.formSection}>
                         <Text style={styles.inputLabel}>Remarks *</Text>
@@ -368,7 +637,9 @@ const TicketActionButtons: React.FC = () => {
                     </View>
 
                     <View style={styles.formSection}>
-                        <Text style={styles.inputLabel}>Picture of Client/Speed Test</Text>
+                        <Text style={styles.inputLabel}>
+                            {ImageMessage(ticket)}
+                        </Text>
                         {pictureCause ? (
                             <View style={styles.imagePreviewContainer}>
                                 <Image source={{ uri: pictureCause }} style={styles.imagePreview} />
@@ -389,8 +660,10 @@ const TicketActionButtons: React.FC = () => {
                         )}
                     </View>
 
+
+
                     <View style={styles.formSection}>
-                        <Text style={styles.inputLabel}>Picture - Reading</Text>
+                        <Text style={styles.inputLabel}>Picture of Reading</Text>
                         {pictureReading ? (
                             <View style={styles.imagePreviewContainer}>
                                 <Image source={{ uri: pictureReading }} style={styles.imagePreview} />
@@ -441,7 +714,7 @@ const TicketActionButtons: React.FC = () => {
                     </View>
 
                     <View style={styles.formSection}>
-                        <Text style={styles.inputLabel}>Cause Picture</Text>
+                        <Text style={styles.inputLabel}> {ImageMessage(ticket)}</Text>
                         {pictureCause ? (
                             <Image source={{ uri: 'https://staging.kazibufastnet.com/storage/' + ticket?.pictureCause }} style={styles.imagePreview} />
                         ) : (
@@ -450,7 +723,7 @@ const TicketActionButtons: React.FC = () => {
                     </View>
 
                     <View style={styles.formSection}>
-                        <Text style={styles.inputLabel}>Reading Picture</Text>
+                        <Text style={styles.inputLabel}> Picture Reading</Text>
                         {pictureReading ? (
                             <Image source={{ uri: 'https://staging.kazibufastnet.com/storage/' + ticket?.pictureReading }} style={styles.imagePreview} />
                         ) : (
@@ -483,6 +756,10 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 16, fontWeight: '600', color: '#374151', marginBottom: 12 },
     buttonRow: { flexDirection: 'row', gap: 12, width: '100%' },
     flexButton: { flex: 1, minHeight: 50 },
+    acceptButton: {
+
+
+    },
     completionContainer: {
         backgroundColor: '#FFFFFF',
         padding: 20,
@@ -509,7 +786,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#111827',
     },
-    textArea: { minHeight: 120, textAlignVertical: 'top' },
+    textArea: { minHeight: 50, textAlignVertical: 'top' },
     locationContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     locationInput: { flex: 1 },
     locationButton: {
@@ -528,6 +805,14 @@ const styles = StyleSheet.create({
         padding: 18,
         backgroundColor: '#F9FAFB',
         alignItems: 'center',
+    },
+    dropdown: {
+        height: 60,  // Adjust height if necessary
+        marginTop: 2,
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 8,
     },
     uploadButtonText: { color: '#6B7280', fontSize: 15, fontWeight: '500' },
     imagePreviewContainer: { position: 'relative' },

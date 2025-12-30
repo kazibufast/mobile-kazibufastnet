@@ -145,6 +145,19 @@ export default function TeamScreen() {
 
         setComment('');
     }
+
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return "—";
+
+        const date = new Date(dateString);
+
+        return new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        }).format(date);
+    };
+
     return (
         <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
             <Header />
@@ -184,7 +197,10 @@ export default function TeamScreen() {
 
                         <View style={styles.detailCell}>
                             <Text style={styles.detailLabel}>DATE</Text>
-                            <Text style={styles.detailValue}>{team?.date}</Text>
+                            <Text style={styles.detailValue}>
+                                {formatDate(team?.date)}
+                            </Text>
+
                         </View>
                     </View>
 
@@ -258,16 +274,17 @@ export default function TeamScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#f7f7f7ff',
-        paddingTop: 25,
+        backgroundColor: '#00AF9F',
+        paddingTop: 30,
     },
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC"
+        backgroundColor: '#000000ff'
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 24
+        paddingBottom: 24,
+        backgroundColor: '#fff'
     },
 
     commentContainer: {
@@ -319,7 +336,7 @@ const styles = StyleSheet.create({
     infoCard: {
         padding: 10,
         marginBottom: 16,
-      
+
     },
     cardTitle: {
         fontSize: 18,

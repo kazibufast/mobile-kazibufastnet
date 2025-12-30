@@ -33,7 +33,7 @@ export default function TimeInScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isClocking, setIsClocking] = useState(false);
     const [technician, setTechnician] = useState<any>(null);
-    const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [location, setLocation] = useState<string>('');
     const [locationError, setLocationError] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState<string>('');
     const [currentDate, setCurrentDate] = useState<string>('');
@@ -118,6 +118,7 @@ export default function TimeInScreen() {
                 setIsClockedIn(timeInStatus === 'true');
             }
 
+            await getLocation();
 
         } catch (error) {
             console.error('Error loading initial data:', error);
@@ -140,6 +141,8 @@ export default function TimeInScreen() {
             const position = await Location.getCurrentPositionAsync({});
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
+
+            setLocation(lat + "," + lon);
 
             // Reverse geocoding via OpenStreetMap
             const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
@@ -181,27 +184,20 @@ export default function TimeInScreen() {
             setLocationText("Unable to retrieve location.");
         }
     };
-    useEffect(() => {
-        if (location) {
-            getLocation();
-        }
-    }, [location]);
-
-
 
 
     const handleCapture = async (cameraRef: any) => {
         if (cameraRef.current) {
             const options = {
-                quality: 1,  // High quality
-                base64: true,  // Get base64 string of the photo
-                exif: false,  // Don't include EXIF data
+                quality: 1,
+                base64: true,
+                exif: false,
             };
 
-            // Capture photo and store in the state
+
             const photo = await cameraRef.current.takePictureAsync(options);
-            setPicture(photo.base64);  // Set the captured photo's base64 string to the state
-            setShowCamera(false);  // Close camera after taking the picture
+            setPicture(photo.base64);
+            setShowCamera(false);
         }
     };
 
@@ -226,13 +222,6 @@ export default function TimeInScreen() {
     };
 
 
-    useEffect(() => {
-        if (location) {
-            getLocation();
-        }
-    }, [location]);
-
-
 
     useEffect(() => {
         if (picture) {
@@ -241,7 +230,8 @@ export default function TimeInScreen() {
     }, [picture]);
 
 
-    const handleTimein = async (location: { latitude: number; longitude: number }) => {
+
+    const handleTimein = async (location: { latitude: number; longitude: number, picture: string | null }) => {
         const url = `https://staging.kazibufastnet.com/api/tech/time_in/${technician?.id}`;
 
         try {
@@ -260,13 +250,14 @@ export default function TimeInScreen() {
                 body: JSON.stringify({
                     location: location,
                     time: new Date().toISOString(),
+                    picture: picture,
 
                 }),
             });
 
             if (response.ok) {
                 const responseData = await response.json();
-                console.log('Time In successful:', responseData);
+                console.log('Time In successful:', responseData); 
 
                 setIsPictureTaken(false);
                 // Redirect to the tickets page after success
@@ -285,7 +276,6 @@ export default function TimeInScreen() {
     // Handle the button press to send the request
     const handleTimeIn = async () => {
 
-
         if (!location) {
             Alert.alert('Missing Location.');
             return;
@@ -293,6 +283,7 @@ export default function TimeInScreen() {
 
         await handleTimein(location);
         setIsPictureTaken(false);
+
     };
 
     const handlePictureTaken = () => {
@@ -306,13 +297,13 @@ export default function TimeInScreen() {
                 <View style={styles.locationHeader}>
                     <Ionicons name="location" size={scaleSize(20)} color="#00AFA1" />
                     <Text style={styles.locationTitle}>CURRENT LOCATION</Text>
-                    
+
                 </View>
 
                 <View style={styles.locationCurrent}>
                     {locationText ? (
                         <View style={{ flex: 1 }}>
-                            <Text  numberOfLines={1} ellipsizeMode="tail" style={{ color: "#00AFA1", fontSize: 14, fontWeight: "600" }}>
+                            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: "#00AFA1", fontSize: 14, fontWeight: "600" }}>
                                 {locationText}
                             </Text>
                         </View>

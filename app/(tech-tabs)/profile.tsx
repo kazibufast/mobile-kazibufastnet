@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -24,7 +24,7 @@ const Profile: React.FC = () => {
           text: "OK",
           onPress: () => {
             setToken(null);
-            router.push("/mpin-login");
+            router.push("/");
           },
         },
       ],
@@ -111,11 +111,13 @@ const Profile: React.FC = () => {
 
 
             <TouchableOpacity style={styles.timeOutButton} onPress={() => router.push("/(time-out)/time-out")}>
+              <MaterialIcons name="timer" size={20} color="#fff" />
               <Text style={styles.logoutText}>Time Out</Text>
             </TouchableOpacity>
 
 
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <MaterialIcons name="logout" size={20} color="#ffffffff" />
               <Text style={styles.logoutText}>Log Out</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -128,8 +130,8 @@ const Profile: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f7f7f7ff',
-    paddingTop: 25,
+    backgroundColor: '#00AF9F',
+    paddingTop: 30,
   },
   container: { flex: 1, backgroundColor: '#fff' },
   contentContainer: { flex: 1 },
@@ -147,8 +149,17 @@ const styles = StyleSheet.create({
   settingText: { fontSize: 16, color: '#333', marginLeft: 15 },
   termsItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, backgroundColor: '#f8f8f8', borderRadius: 8, marginBottom: 8 },
   termsText: { fontSize: 15, color: '#333' },
-  timeOutButton: { marginHorizontal: 20, margin: 5, paddingVertical: 15, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center' },
-  logoutButton: { marginHorizontal: 20, margin: 10, paddingVertical: 15, backgroundColor: '#ff6b6b', borderRadius: 8, alignItems: 'center' },
+  timeOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8, marginHorizontal: 20, margin: 5, paddingVertical: 15, backgroundColor: '#FF9800', borderRadius: 8, 
+  },
+  logoutButton: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8, marginHorizontal: 20, margin: 10, paddingVertical: 15, backgroundColor: '#ff6b6b', borderRadius: 8,
+  },
   logoutText: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
 });
 
