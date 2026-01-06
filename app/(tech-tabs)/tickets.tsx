@@ -44,7 +44,6 @@ const Ticket: React.FC = () => {
     "all" | "open" | "pending" | "accepted" | "inProgress" | "completed"
   >("all");
 
-  const [hasTeam, setHasTeam] = useState<boolean>(true);
   const user = getUser();
 
 
@@ -54,7 +53,7 @@ const Ticket: React.FC = () => {
     try {
       const token = await getToken();
       const response = await fetch(
-        "https://tub.kazibufastnet.com/api/tech/tickets",
+        "https://tub.kazibufastnet.com/api/tech/tickets/" + user?.team_id,
         {
           method: "GET",
           headers: {

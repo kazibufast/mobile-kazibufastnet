@@ -10,7 +10,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
@@ -26,6 +26,7 @@ export default function TeamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const user = getToken();
+  const [works, setWorks] = useState<string[]>([]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -59,7 +60,7 @@ export default function TeamScreen() {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch data. Status: ${response.status}`);
+        Alert.alert("Sorry! please check network connection..");
       }
       const data = await response.json();
 
@@ -78,6 +79,11 @@ export default function TeamScreen() {
           ? data.team.members
           : data.team?.members?.split(",").map((m: string) => m.trim()) || [],
       };
+      setWorks(
+        Array.isArray(data.works)
+          ? data.works.filter((w: string) => w.trim() !== "")
+          : []
+      );
 
       setTeam(teamInfo);
     } catch (error: any) {
@@ -147,13 +153,28 @@ export default function TeamScreen() {
       case "pending":
         return "#F59E0B";
       default:
-        return "#6B7280";
+        return "#00AF9F";
     }
   };
 
+  type WorkItem = {
+    id: string;
+    description: string;
+  };
+
+  const parsedWorks: WorkItem[] = works
+    .filter((w) => w.trim() !== "") // remove empty strings
+    .map((w) => {
+      const [id, ...rest] = w.split(":");
+      return {
+        id: id.trim(),
+        description: rest.join(":").trim(),
+      };
+    });
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
-      <Header title="Team Details" showBack={true} />
+      <Header/>
 
       {/* ⏳ LOADING */}
       {loading && (
@@ -219,7 +240,7 @@ export default function TeamScreen() {
                 <MaterialCommunityIcons
                   name="account-group"
                   size={24}
-                  color="#FFFFFF"
+                  color="#00AF9F"
                 />
                 <Text style={styles.teamName}>{team.teamName}</Text>
               </View>
@@ -311,8 +332,7 @@ export default function TeamScreen() {
                       </Text>
                       <Text style={styles.memberRole}>Technician</Text>
                     </View>
-                    <View style={styles.memberIndex}>
-                    </View>
+                    <View style={styles.memberIndex}></View>
                   </View>
                 ))}
               </View>
@@ -379,6 +399,26 @@ export default function TeamScreen() {
             </View>
           </View>
 
+          {/* Works Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Work History</Text>
+
+            {parsedWorks.length === 0 ? (
+              <Text style={styles.emptyText}>No work history available</Text>
+            ) : (
+              parsedWorks.map((item, index) => (
+                <View key={item.id + index} style={styles.itemRow}>
+                  <Text>
+                    <Text style={styles.idText}>{item.id}:</Text>{" "}
+                    <Text style={styles.descriptionText}>
+                      {item.description}
+                    </Text>
+                  </Text>
+                </View>
+              ))
+            )}
+          </View>
+
           {/* Refresh Hint */}
           <View style={styles.hintContainer}>
             <MaterialCommunityIcons
@@ -400,7 +440,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#00AF9F",
-    paddingTop: 35
+    paddingTop: 35,
   },
   center: {
     flex: 1,
@@ -421,11 +461,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 32,
+    backgroundColor: "#FFFFFF"
   },
   emptyScrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#37638fff",
   },
   emptyWrapper: {
     alignItems: "center",
@@ -476,12 +517,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   headerCard: {
-    backgroundColor: "#00AF9F",
+    backgroundColor: "#ffffffff",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     elevation: 4,
-    shadowColor: "#00AF9F",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -498,7 +538,7 @@ const styles = StyleSheet.create({
   teamName: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#000000ff",
     marginLeft: 12,
   },
   statusBadge: {
@@ -704,5 +744,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
     marginLeft: 8,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 10,
+
+    // Android shadow
+    elevation: 4,
+
+    // iOS shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+
+  itemRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+
+  itemText: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+  },
+
+  emptyText: {
+    textAlign: "center",
+    color: "#999",
+    paddingVertical: 20,
+  },
+  idText: {
+    fontWeight: "700",
+    color: "#2563eb", // blue for ID
+  },
+
+  descriptionText: {
+    fontSize: 14,
+    color: "#333",
   },
 });

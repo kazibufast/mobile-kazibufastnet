@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { StyleProp, ViewStyle } from "react-native";
+
 import {
   Alert,
   Image,
@@ -22,7 +24,13 @@ import TicketButton from "./TicketButton";
 
 /* ---------------- TYPES ---------------- */
 
-type TicketStatus = "pending" | "accepted" | "in_progress" | "completed";
+type TicketStatus = "pending" | "accepted" | "in progress" | "completed";
+type TicketButtonProps = {
+  label: string;
+  onPress: () => void;
+  style?: StyleProp<ViewStyle>;
+};
+
 
 interface TicketItem {
   id: string;
@@ -86,7 +94,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       const res = await fetch(
-        `https://staging.kazibufastnet.com/api/tech/tickets/view/${id}`,
+        `https://tub.kazibufastnet.com/api/tech/tickets/view/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -102,8 +110,8 @@ const TicketActionButtons: React.FC = () => {
       const normalizedStatus: TicketStatus =
         t.status === "accepted"
           ? "accepted"
-          : t.status === "in_progress"
-          ? "in_progress"
+          : t.status === "in progress"
+          ? "in progress"
           : "pending";
 
       setTicket({
@@ -149,7 +157,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://staging.kazibufastnet.com/api/tech/tickets/accepted/${id}`,
+        `https://tub.kazibufastnet.com/api/tech/tickets/accepted/${id}`,
         {
           method: "GET",
           headers: {
@@ -171,7 +179,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://staging.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+        `https://tub.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
         {
           method: "GET",
           headers: {
@@ -181,7 +189,7 @@ const TicketActionButtons: React.FC = () => {
         }
       );
 
-      setStatus("in_progress");
+      setStatus("in progress");
       Alert.alert("Started", "Work started");
     } catch {
       Alert.alert("Error", "Failed to start work");
@@ -252,10 +260,10 @@ const TicketActionButtons: React.FC = () => {
     pictureReading: string | null
   ) => {
     if (!location) {
-    Alert.alert("Error", "Please fill out all required fields");
-    return;
-  }
-    const url = `https://staging.kazibufastnet.com/api/tech/tickets/completed/${id}`;
+      Alert.alert("Error", "Please fill out all required fields");
+      return;
+    }
+    const url = `https://tub.kazibufastnet.com/api/tech/tickets/completed/${id}`;
 
     try {
       const token = await getToken();
@@ -264,9 +272,9 @@ const TicketActionButtons: React.FC = () => {
       formData.append("remarks", remarks);
       formData.append("location", location);
 
-      formData.append("device_use", deviceUse);
-      formData.append("ip_address", ipAddress);
-      formData.append("mac_address", macAddress);
+      formData.append("device_use", deviceUse  || '');
+      formData.append("ip_address", ipAddress || '');
+      formData.append("mac_address", macAddress || '');
       formData.append(
         "installation_date",
         installationDate.toLocaleDateString()
@@ -280,11 +288,11 @@ const TicketActionButtons: React.FC = () => {
 
       // Append fields for wired connection (LCP number, NAP number, etc.)
       if (connectionType === "wired") {
-        formData.append("lcp_number", lcpNumber);
-        formData.append("nap_number", napNumber);
-        formData.append("port_number", portNumber);
-        formData.append("tag_number", tagNumber);
-        formData.append("vlan_id", vlanId);
+        formData.append("lcp_no", lcpNumber || '');
+        formData.append("nap_no", napNumber || '');
+        formData.append("port_no", portNumber || '');
+        formData.append("tag_no", tagNumber || '');
+        formData.append("vlan_id", vlanId || '');
       }
 
       const appendImage = (fieldName: string, uri: string | null) => {
@@ -341,7 +349,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://staging.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+        `https://tub.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
         {
           method: "GET",
           headers: {
@@ -351,7 +359,7 @@ const TicketActionButtons: React.FC = () => {
         }
       );
 
-      setStatus("in_progress");
+      setStatus("in progress");
       Alert.alert("Started", "Work started");
     } catch {
       Alert.alert("Error", "Failed to start work");
@@ -386,10 +394,10 @@ const TicketActionButtons: React.FC = () => {
     }
   };
 
-  const onDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || installationDate;
-    setShowDatePicker(false); // Close date picker after selecting
-    setInstallationDate(currentDate); // Set the selected date
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const currentDate = selectedDate ?? installationDate;
+    setShowDatePicker(false);
+    setInstallationDate(currentDate);
   };
 
   console.log("hi " + ticket?.type);
@@ -435,7 +443,7 @@ const TicketActionButtons: React.FC = () => {
         </View>
       )}
 
-      {status === "in_progress" && !isCompleted && (
+      {status === "in progress" && !isCompleted && (
         <View style={styles.completionContainer}>
           <Text style={styles.completionTitle}>Complete Ticket</Text>
           <Text style={styles.completionSubtitle}>
@@ -721,7 +729,7 @@ const TicketActionButtons: React.FC = () => {
               <Image
                 source={{
                   uri:
-                    "https://staging.kazibufastnet.com/storage/" +
+                    "https://tub.kazibufastnet.com/storage/" +
                     ticket?.pictureCause,
                 }}
                 style={styles.imagePreview}
@@ -737,7 +745,7 @@ const TicketActionButtons: React.FC = () => {
               <Image
                 source={{
                   uri:
-                    "https://staging.kazibufastnet.com/storage/" +
+                    "https://tub.kazibufastnet.com/storage/" +
                     ticket?.pictureReading,
                 }}
                 style={styles.imagePreview}
@@ -824,6 +832,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#111827",
   },
+  inputText: {},
   textArea: { minHeight: 50, textAlignVertical: "top" },
   locationContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
   locationInput: { flex: 1 },

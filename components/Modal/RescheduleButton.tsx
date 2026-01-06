@@ -29,7 +29,7 @@ const RescheduleButton: React.FC<RescheduleButtonProps> = ({ onConfirm, style })
 
   // Handle reschedule
   const handleReschedule = async (date: string, notes: string) => {
-    const url = `https://staging.kazibufastnet.com/api/tech/tickets/reschedule/${id}`;
+    const url = `https://tub.kazibufastnet.com/api/tech/tickets/reschedule/${id}`;
 
     try {
       const token = await getToken();

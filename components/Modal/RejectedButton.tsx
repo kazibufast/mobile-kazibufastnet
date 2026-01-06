@@ -21,7 +21,7 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const handleReject = async (notes: string) => {
-    const url = `https://staging.kazibufastnet.com/api/tech/tickets/reject/${id}`;
+    const url = `https://tub.kazibufastnet.com/api/tech/tickets/reject/${id}`;
 
     try {
       const token = await getToken();

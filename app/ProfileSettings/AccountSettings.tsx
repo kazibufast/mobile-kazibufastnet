@@ -256,18 +256,6 @@ const handleUpdate = async (
                   <Text style={styles.value}>{userData.address}</Text>
                 )}
               </View>
-
-              {/* Account ID (Read Only) */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Account Number</Text>
-                <Text style={styles.value}>ACC-2023-001</Text>
-              </View>
-
-              {/* Member Since (Read Only) */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Member Since</Text>
-                <Text style={styles.value}>January 2023</Text>
-              </View>
               {isEditing && (
                 <>
                   {/* Reset Password Header */}
