@@ -399,8 +399,8 @@ export default function TeamScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingTop: 30
+    backgroundColor: "#00AF9F",
+    paddingTop: 35
   },
   center: {
     flex: 1,

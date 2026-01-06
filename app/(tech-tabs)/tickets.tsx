@@ -53,7 +53,6 @@ const Ticket: React.FC = () => {
     setLoading(true);
     try {
       const token = await getToken();
-      const user = getUser();
       const response = await fetch(
         "https://tub.kazibufastnet.com/api/tech/tickets",
         {
@@ -63,7 +62,7 @@ const Ticket: React.FC = () => {
             Accept: "application/json",
           },
         }
-      );
+      ); 
       
 
       if (!response.ok) {
