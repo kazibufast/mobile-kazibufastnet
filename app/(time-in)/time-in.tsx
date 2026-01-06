@@ -323,25 +323,7 @@ export default function TimeInScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Instructions */}
-        {!showCamera && !photo && (
-          <View style={styles.instructions}>
-            <Text style={styles.instructionsTitle}>Instructions:</Text>
-            <View style={styles.instructionItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#00AFA1" />
-              <Text style={styles.instructionText}>Ensure location services are enabled</Text>
-            </View>
-            <View style={styles.instructionItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#00AFA1" />
-              <Text style={styles.instructionText}>Take a clear photo of yourself</Text>
-            </View>
-            <View style={styles.instructionItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#00AFA1" />
-              <Text style={styles.instructionText}>Submit when ready to clock in</Text>
-            </View>
-          </View>
-        )}
+        
       </ScrollView>
     </SafeAreaView>
   );
@@ -439,7 +421,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   timeContent: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   timeText: {
     color: '#fff',
