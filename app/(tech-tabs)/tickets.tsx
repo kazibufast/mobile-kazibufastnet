@@ -1,3 +1,4 @@
+import { getUser } from "@/scripts/user";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -14,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
 import { getToken } from "../../scripts/token";
+
 
 interface TicketItem {
   id: string;
@@ -42,11 +44,16 @@ const Ticket: React.FC = () => {
     "all" | "open" | "pending" | "accepted" | "inProgress" | "completed"
   >("all");
 
+  const [hasTeam, setHasTeam] = useState<boolean>(true);
+  const user = getUser();
+
+
   const fetchTickets = async () => {
     setRefreshing(true);
     setLoading(true);
     try {
       const token = await getToken();
+      const user = getUser();
       const response = await fetch(
         "https://tub.kazibufastnet.com/api/tech/tickets",
         {
@@ -57,6 +64,7 @@ const Ticket: React.FC = () => {
           },
         }
       );
+      
 
       if (!response.ok) {
         const errorDetails = await response.text();
@@ -66,6 +74,8 @@ const Ticket: React.FC = () => {
       }
 
       const data = await response.json();
+
+     
 
       const normalizeStatus = (status: string): TicketItem["status"] => {
         const s = status.toLowerCase();
@@ -106,6 +116,7 @@ const Ticket: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    
     fetchTickets();
   }, []);
 
@@ -166,7 +177,7 @@ const Ticket: React.FC = () => {
     }
   };
 
-    const getPriorityStatus = (priority_level: TicketItem["priority_level"]) => {
+  const getPriorityStatus = (priority_level: TicketItem["priority_level"]) => {
     switch (priority_level) {
       case "low priority":
         return { icon: "build-outline", color: "#059669" };
@@ -355,162 +366,164 @@ const Ticket: React.FC = () => {
                 <ActivityIndicator size="large" color="#3B82F6" />
                 <Text style={styles.loadingText}>Loading tickets...</Text>
               </View>
+            ) : user?.team_id == null ? (
+              // NO TEAM STATE
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+                </View>
+                <Text style={styles.emptyTitle}>No Team Assigned</Text>
+                <Text style={styles.emptySubtitle}>
+                  You are not currently assigned to a team. Please contact
+                  admin.
+                </Text>
+              </View>
+            ) : filteredTickets.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={48}
+                    color="#D1D5DB"
+                  />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {search ? "No matching tickets" : "No tickets found"}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {search
+                    ? "Try adjusting your search terms"
+                    : "You currently have no tickets assigned"}
+                </Text>
+                <TouchableOpacity
+                  style={styles.refreshButton}
+                  onPress={fetchTickets}
+                >
+                  <Ionicons name="refresh" size={18} color="#FFF" />
+                  <Text style={styles.refreshButtonText}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <>
-                {/* Empty State */}
-                {filteredTickets.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <View style={styles.emptyIcon}>
-                      <Ionicons
-                        name="document-text-outline"
-                        size={48}
-                        color="#D1D5DB"
-                      />
-                    </View>
-                    <Text style={styles.emptyTitle}>
-                      {search ? "No matching tickets" : "No tickets found"}
-                    </Text>
-                    <Text style={styles.emptySubtitle}>
-                      {search
-                        ? "Try adjusting your search terms"
-                        : "You currently have no tickets assigned"}
-                    </Text>
+              <View style={styles.ticketsContainer}>
+                <Text style={styles.resultsCount}>
+                  {filteredTickets.length} ticket
+                  {filteredTickets.length !== 1 ? "s" : ""} found
+                </Text>
+
+                {filteredTickets.map((ticket) => {
+                  const statusConfig = getStatusConfig(ticket.status);
+                  const typeConfig = getTypeIcon(ticket.type);
+                  const priority_level = getPriorityStatus(
+                    ticket.priority_level
+                  );
+
+                  return (
                     <TouchableOpacity
-                      style={styles.refreshButton}
-                      onPress={fetchTickets}
+                      key={ticket.id}
+                      style={styles.ticketCard}
+                      onPress={() => router.push(`/tickets/${ticket.id}`)}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons name="refresh" size={18} color="#FFF" />
-                      <Text style={styles.refreshButtonText}>Refresh</Text>
+                      {/* Compact Header Row */}
+                      <View style={styles.headerRow}>
+                        <View style={styles.idStatusContainer}>
+                          <View style={styles.ticketId}>
+                            <Ionicons
+                              name="ticket-outline"
+                              size={12}
+                              color="#6B7280"
+                            />
+                            <Text style={styles.ticketIdText}>{ticket.id}</Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.statusBadge,
+                              { backgroundColor: statusConfig.bgColor },
+                            ]}
+                          >
+                            <Ionicons
+                              name={statusConfig.icon as any}
+                              size={10}
+                              color={statusConfig.color}
+                            />
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: statusConfig.color },
+                              ]}
+                            >
+                              {ticket.status}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {ticket.type && (
+                          <View style={styles.typeBadge}>
+                            <Ionicons
+                              name={typeConfig.icon as any}
+                              size={12}
+                              color={typeConfig.color}
+                            />
+                            <Text
+                              style={[
+                                styles.typeText,
+                                { color: typeConfig.color },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {ticket.type}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Compact Content */}
+                      <View style={styles.contentRow}>
+                        <View style={styles.textContainer}>
+                          <Text style={styles.subjectText} numberOfLines={2}>
+                            {ticket.subject}
+                          </Text>
+                          <View style={styles.clientRow}>
+                            <Ionicons
+                              name="person-outline"
+                              size={12}
+                              color="#6B7280"
+                            />
+                            <Text style={styles.clientName} numberOfLines={1}>
+                              {ticket.clientName}
+                            </Text>
+                          </View>
+                        </View>
+                        <View>
+                          <View style={styles.dateTime}>
+                            <Ionicons
+                              name="calendar-outline"
+                              size={12}
+                              color="#9CA3AF"
+                            />
+                            <Text style={styles.dateText} numberOfLines={1}>
+                              {formatDate(ticket.date)}
+                            </Text>
+                          </View>
+                          <View>
+                            <Text
+                              style={[
+                                styles.priority,
+                                { color: priority_level.color },
+                              ]}
+                            >
+                              {ticket.priority_level.toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Card Shadow Effect */}
+                      <View style={styles.cardShadow} />
                     </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.ticketsContainer}>
-                    <Text style={styles.resultsCount}>
-                      {filteredTickets.length} ticket
-                      {filteredTickets.length !== 1 ? "s" : ""} found
-                    </Text>
-
-                    {filteredTickets.map((ticket) => {
-                      const statusConfig = getStatusConfig(ticket.status);
-                      const typeConfig = getTypeIcon(ticket.type);
-                      const priority_level= getPriorityStatus(ticket.priority_level);
-
-                      return (
-                        <TouchableOpacity
-                          key={ticket.id}
-                          style={styles.ticketCard}
-                          onPress={() => router.push(`/tickets/${ticket.id}`)}
-                          activeOpacity={0.7}
-                        >
-                          {/* Compact Header Row */}
-                          <View style={styles.headerRow}>
-                            <View style={styles.idStatusContainer}>
-                              <View style={styles.ticketId}>
-                                <Ionicons
-                                  name="ticket-outline"
-                                  size={12}
-                                  color="#6B7280"
-                                />
-                                <Text style={styles.ticketIdText}>
-                                  {ticket.id}
-                                </Text>
-                              </View>
-                              <View
-                                style={[
-                                  styles.statusBadge,
-                                  { backgroundColor: statusConfig.bgColor },
-                                ]}
-                              >
-                                <Ionicons
-                                  name={statusConfig.icon as any}
-                                  size={10}
-                                  color={statusConfig.color}
-                                />
-                                <Text
-                                  style={[
-                                    styles.statusText,
-                                    { color: statusConfig.color },
-                                  ]}
-                                >
-                                  {ticket.status}
-                                </Text>
-                              </View>
-                            </View>
-
-                            {ticket.type && (
-                              <View style={styles.typeBadge}>
-                                <Ionicons
-                                  name={typeConfig.icon as any}
-                                  size={12}
-                                  color={typeConfig.color}
-                                />
-                                <Text
-                                  style={[
-                                    styles.typeText,
-                                    { color: typeConfig.color },
-                                  ]}
-                                  numberOfLines={1}
-                                >
-                                  {ticket.type}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* Compact Content */}
-                          <View style={styles.contentRow}>
-                            <View style={styles.textContainer}>
-                              <Text
-                                style={styles.subjectText}
-                                numberOfLines={2}
-                              >
-                                {ticket.subject}
-                              </Text>
-                              <View style={styles.clientRow}>
-                                <Ionicons
-                                  name="person-outline"
-                                  size={12}
-                                  color="#6B7280"
-                                />
-                                <Text
-                                  style={styles.clientName}
-                                  numberOfLines={1}
-                                >
-                                  {ticket.clientName}
-                                </Text>
-                              </View>
-                            </View>
-                            <View>
-                              <View style={styles.dateTime}>
-                                <Ionicons
-                                  name="calendar-outline"
-                                  size={12}
-                                  color="#9CA3AF"
-                                />
-                                <Text style={styles.dateText} numberOfLines={1}>
-                                  {formatDate(ticket.date)}
-                                </Text>
-                              </View>
-                              <View>
-                                <Text style={[styles.priority,
-                                  { color: priority_level.color },
-                                ]}>
-                                  {(
-                                    ticket.priority_level
-                                  ).toUpperCase()}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-
-                          {/* Card Shadow Effect */}
-                          <View style={styles.cardShadow} />
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
-              </>
+                  );
+                })}
+              </View>
             )}
           </ScrollView>
         </View>
@@ -858,7 +871,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     alignSelf: "flex-end",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 
