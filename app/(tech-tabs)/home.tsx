@@ -79,7 +79,7 @@ const Home: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
 
   const stats = {
-    activeTickets: openTickets,
+     activeTickets: openTickets,
     pending: pendingTickets,
     completed: completedTickets,
     closed: closedTickets,
