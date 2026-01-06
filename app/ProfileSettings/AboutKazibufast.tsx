@@ -69,7 +69,7 @@ const AboutKazibufast: React.FC = () => {
 
                         <View style={styles.contactItem}>
                             <Ionicons name="mail-outline" size={22} color="#00afa1ff" />
-                            <Text style={styles.contactText}>support@kazibufast.com</Text>
+                            <Text style={styles.contactText}>kazibufast@gmail.com</Text>
                         </View>
 
                         <View style={styles.contactItem}>
@@ -82,14 +82,6 @@ const AboutKazibufast: React.FC = () => {
                         <View style={styles.socialContainer}>
                             <TouchableOpacity style={styles.socialButton} onPress={handleOpenFacebook}>
                                 <Ionicons name="logo-facebook" size={28} color="#1877F2" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.socialButton} onPress={handleOpenInstagram}>
-                                <Ionicons name="logo-instagram" size={28} color="#E4405F" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.socialButton} onPress={handleOpenTwitter}>
-                                <Ionicons name="logo-twitter" size={28} color="#1DA1F2" />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -129,9 +121,8 @@ const AboutKazibufast: React.FC = () => {
 const styles = StyleSheet.create({
      safeArea: {
     flex: 1,
-    backgroundColor: '#f6f7f8ff',
-    paddingBottom: 40,
-    paddingTop: 30
+    backgroundColor: '#00AF9F',
+    paddingTop: 35
   },
     container: {
         flex: 1,

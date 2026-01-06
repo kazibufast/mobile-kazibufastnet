@@ -8,7 +8,7 @@ import { getUser } from '../../scripts/user';
 
 const Profile: React.FC = () => {
   const router = useRouter();
-  const user = getUser();
+   let user = getUser();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleLogout = () => {
@@ -39,6 +39,7 @@ const Profile: React.FC = () => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    user=getUser();
     setTimeout(() => {
       setRefreshing(false);
     }, 1500);
@@ -74,18 +75,6 @@ const Profile: React.FC = () => {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#999" />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.settingItem}
-                onPress={() => router.push('/ProfileSettings/PrivacySecurity')}
-              >
-                <View style={styles.settingLeft}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#666" />
-                  <Text style={styles.settingText}>Privacy & Security</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#999" />
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.settingItem}
                 onPress={() => router.push('/ProfileSettings/HelpSupport')}
@@ -131,7 +120,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#00AF9F',
-    paddingTop: 30,
+    paddingTop: 35,
   },
   container: { flex: 1, backgroundColor: '#fff' },
   contentContainer: { flex: 1 },

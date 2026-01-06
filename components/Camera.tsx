@@ -2,6 +2,7 @@ import { AntDesign } from '@expo/vector-icons';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { setPicture } from './../scripts/picture';
 import PhotoPreviewSection from './PhotoPreviewSection';
 
 export default function Camera() {
@@ -40,7 +41,7 @@ export default function Camera() {
             const takedPhoto = await cameraRef.current.takePictureAsync(options);
 
             setPhoto(takedPhoto);  // Save the photo for preview
-           
+           setPicture(takedPhoto);
         }
     };
 

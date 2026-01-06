@@ -181,7 +181,7 @@ export default function TicketDetails() {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Location on Map</Text>
                         <WebView
-                            source={{ uri: 'https://staging.kazibufastnet.com/client/map/' + ticket.latitude + "/" + ticket.longitude }}
+                            source={{ uri: 'https://tub.kazibufastnet.com/client/map/' + ticket.latitude + "/" + ticket.longitude }}
                             style={styles.webview}
                         />
                     </View>

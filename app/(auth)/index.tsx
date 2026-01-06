@@ -34,7 +34,7 @@ export default function LoginScreen() {
             return;
         }
 
-        const url = "https://staging.kazibufastnet.com/api/tech/login";
+        const url = "https://tub.kazibufastnet.com/api/tech/login";
 
         setLoading(true);
         try {

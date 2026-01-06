@@ -87,7 +87,7 @@ export default function TeamScreen() {
             setTeam(teamInfo);
 
         } catch (error: any) {
-            console.error('Fetch team error:', error.message);
+            // console.error('Fetch team error:', error.message);
         }
     };
 
@@ -97,7 +97,7 @@ export default function TeamScreen() {
     }, []);
 
     const handleComment = async (comments: string) => {
-        const url = `https://staging.kazibufastnet.com/api/tech/team/comments/${team?.id}`;
+        const url = `https://tub.kazibufastnet.com/api/tech/team/comments/${team?.id}`;
 
         try {
             const token = await getToken();
@@ -181,18 +181,18 @@ export default function TeamScreen() {
                     <View style={styles.detailsGrid}>
                         <View style={styles.detailCell}>
                             <Text style={styles.detailLabel}>TEAM</Text>
-                            <Text style={styles.detailValue}>{team?.teamName}</Text>
+                            <Text style={styles.detailValue}>{team?.teamName || '-'}</Text>
 
                         </View>
 
                         <View style={styles.detailCell}>
                             <Text style={styles.detailLabel}>STATUS</Text>
-                            <Text style={styles.detailValue}>{team?.status}</Text>
+                            <Text style={styles.detailValue}>{team?.status || '-'}</Text>
                         </View>
 
                         <View style={styles.detailCell}>
                             <Text style={styles.detailLabel}>SHIFT</Text>
-                            <Text style={styles.detailValue}>{team?.shift}</Text>
+                            <Text style={styles.detailValue}>{team?.shift || '-'}</Text>
                         </View>
 
                         <View style={styles.detailCell}>
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#00AF9F',
-        paddingTop: 30,
+        paddingTop: 35,
     },
     container: {
         flex: 1,

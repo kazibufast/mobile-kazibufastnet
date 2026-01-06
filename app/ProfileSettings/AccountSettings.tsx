@@ -1,10 +1,19 @@
-import { getToken } from '@/scripts/token';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, GestureResponderEvent, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getUser } from '../../scripts/user';
+import { getToken } from "@/scripts/token";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  Alert,
+  GestureResponderEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { getUser, setUser } from "../../scripts/user";
 
 const AccountSettings: React.FC = () => {
   const router = useRouter();
@@ -14,28 +23,31 @@ const AccountSettings: React.FC = () => {
     email: user?.email,
     phone: user?.mobile_number,
     address: user?.address,
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const [isEditing, setIsEditing] = useState(false);
 
   const handleChange = (field: string, value: string) => {
-    setUserData(prev => ({ ...prev, [field]: value }));
+    setUserData((prev) => ({ ...prev, [field]: value }));
   };
 
   const resetPassword = () => {
     Alert.alert(
-      'Are you sure you want to reset your password?',
-      '', 
+      "Are you sure you want to reset your password?",
+      "",
       [
         {
-          text: 'Cancel', 
-          style: 'cancel', 
+          text: "Cancel",
+          style: "cancel",
         },
         {
-          text: 'OK', // Confirm button
+          text: "OK", // Confirm button
           onPress: () => {
             router.push({
-              pathname: "/(auth)/setup-pin",
+              pathname: "/ProfileSettings/ResetPassword",
               params: {
                 phone: userData?.phone,
                 verified: "true",
@@ -45,100 +57,149 @@ const AccountSettings: React.FC = () => {
         },
       ],
       { cancelable: false }
-    )
-  }
-
-
-  const handleUpdate = async (name: string, email: string, address: string, phoneNumber: string) => {
-    const url = `https://staging.kazibufastnet.com/api/tech/profile/update/${user?.id}`;
-
-    try {
-      const token = await getToken();
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          address: address,
-          phoneNumber: phoneNumber,
-        }),
-      });
-
-      // Check the response status
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('Reschedule successful:', responseData);
-        if (responseData.status === 'success') {
-          // Handle success (navigate to a different page, etc.)
-
-          Alert.alert('Successfully update!');
-
-          router.push('/ProfileSettings/AccountSettings');
-
-        } else {
-          console.error('Error rescheduling:', responseData.message || responseData);
-          // Handle error (show error message, etc.)
-        }
-        // router.push('/(tech-tabs)/tickets');
-
-
-      } else {
-        const errorData = await response.json();
-        console.error('Error rescheduling:', errorData);
-        // Handle error (show error message, etc.)
-      }
-    } catch (error) {
-      console.error('Failed to send request:', error);
-      // Handle fetch error (network error, etc.)
-    }
+    );
   };
 
+const handleUpdate = async (
+  name: string,
+  email: string,
+  address: string,
+  phoneNumber: string,
+  currentPassword?: string,
+  newPassword?: string,
+  confirmPassword?: string
+) => {
+  const url = `https://tub.kazibufastnet.com/api/tech/profile/update/${user?.id}`;
+
+  try {
+    const token = await getToken();
+
+    // Validate phone number first
+    if (!phoneNumber?.trim()) {
+      Alert.alert("Error", "Phone number is required");
+      return;
+    }
+
+    const body: any = {
+      name,
+      email,
+      address,
+      phoneNumber,
+    };
+
+    // Optional password change
+    if (currentPassword || newPassword || confirmPassword) {
+      // Make sure all fields are filled
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        Alert.alert("Error", "Please fill all password fields");
+        return;
+      }
+
+      // Make sure new and confirm match
+      if (newPassword !== confirmPassword) {
+        Alert.alert("Error", "New password and confirmation do not match");
+        return;
+      }
+
+      body.current_password = currentPassword; // Send current password
+      body.password = newPassword;
+      body.password_confirmation = confirmPassword;
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const responseData = await response.json();
+
+
+    if (responseData.status === "success") {
+      Alert.alert("Success", "Profile updated successfully");
+      setUser(responseData.user);
+      router.push("/ProfileSettings/AccountSettings");
+    } else {
+      // Handle backend validation errors
+      const errors = responseData.errors
+        ? Object.values(responseData.errors).flat().join("\n")
+        : responseData.message || "Update failed";
+
+      // Specific alert if current password is invalid
+      if (
+        responseData.errors?.currentPassword?.includes("incorrect") ||
+        responseData.message?.toLowerCase().includes("current password")
+      ) {
+        Alert.alert("Error", "Current password is incorrect");
+      } else {
+        Alert.alert("Error", errors);
+      }
+
+      // console.error("Update failed:", responseData);
+    }
+  } catch (error) {
+    console.error("Update request failed:", error);
+    Alert.alert("Error", "Failed to update profile. Please try again.");
+  }
+};
 
   const onPressHandler = (event: GestureResponderEvent) => {
-    handleUpdate(userData.fullName, userData.email, userData.address, userData.phone);
+    handleUpdate(
+      userData.fullName,
+      userData.email,
+      userData.address,
+      userData.phone,
+      userData.currentPassword,
+      userData.newPassword,
+      userData.confirmPassword
+    );
+  };
 
-  }
-
-
-
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[ 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
       <View style={styles.container}>
-
-
         <View style={styles.contentContainer}>
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
-              >
-
-              </TouchableOpacity>
+              ></TouchableOpacity>
 
               <View style={styles.header}>
-
                 <Text style={styles.headerTitle}>Account Settings</Text>
-                <Text style={styles.headerSubtitle}>Manage your personal information</Text>
+                <Text style={styles.headerSubtitle}>
+                  Manage your personal information
+                </Text>
               </View>
             </View>
 
             <View style={styles.formContainer}>
               {/* Full Name */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>{user?.name}</Text>
+                <Text style={styles.label}>Full Name</Text>
                 {isEditing ? (
                   <TextInput
                     style={styles.input}
                     value={userData.fullName}
-                    onChangeText={(text) => handleChange('fullName', text)}
+                    onChangeText={(text) => handleChange("fullName", text)}
                     placeholder="Enter your full name"
                   />
                 ) : (
@@ -153,7 +214,7 @@ const AccountSettings: React.FC = () => {
                   <TextInput
                     style={styles.input}
                     value={userData.email}
-                    onChangeText={(text) => handleChange('email', text)}
+                    onChangeText={(text) => handleChange("email", text)}
                     placeholder="Enter your email"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -170,7 +231,7 @@ const AccountSettings: React.FC = () => {
                   <TextInput
                     style={styles.input}
                     value={userData.phone}
-                    onChangeText={(text) => handleChange('phone', text)}
+                    onChangeText={(text) => handleChange("phone", text)}
                     placeholder="Enter your phone number"
                     keyboardType="phone-pad"
                   />
@@ -186,7 +247,7 @@ const AccountSettings: React.FC = () => {
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     value={userData.address}
-                    onChangeText={(text) => handleChange('address', text)}
+                    onChangeText={(text) => handleChange("address", text)}
                     placeholder="Enter your address"
                     multiline
                     numberOfLines={3}
@@ -207,6 +268,116 @@ const AccountSettings: React.FC = () => {
                 <Text style={styles.label}>Member Since</Text>
                 <Text style={styles.value}>January 2023</Text>
               </View>
+              {isEditing && (
+                <>
+                  {/* Reset Password Header */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.sectionTitle}>Reset Password</Text>
+                  </View>
+
+                  {/* Current Password */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Current Password</Text>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        value={userData.currentPassword}
+                        onChangeText={(text) =>
+                          handleChange("currentPassword", text)
+                        }
+                        placeholder="Enter current password"
+                        secureTextEntry={!showCurrent}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowCurrent(!showCurrent)}
+                        style={{ marginLeft: 10 }}
+                      >
+                        <Ionicons
+                          name={showCurrent ? "eye-off-outline" : "eye-outline"}
+                          size={24}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* New Password */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>New Password</Text>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        value={userData.newPassword}
+                        onChangeText={(text) =>
+                          handleChange("newPassword", text)
+                        }
+                        placeholder="Enter new password"
+                        secureTextEntry={!showNew}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowNew(!showNew)}
+                        style={{ marginLeft: 10 }}
+                      >
+                        <Ionicons
+                          name={showNew ? "eye-off-outline" : "eye-outline"}
+                          size={24}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Confirm Password */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Confirm New Password</Text>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        value={userData.confirmPassword}
+                        onChangeText={(text) =>
+                          handleChange("confirmPassword", text)
+                        }
+                        placeholder="Confirm new password"
+                        secureTextEntry={!showConfirm}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowConfirm(!showConfirm)}
+                        style={{ marginLeft: 10 }}
+                      >
+                        <Ionicons
+                          name={showConfirm ? "eye-off-outline" : "eye-outline"}
+                          size={24}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    {/* Password Match Feedback */}
+                    {userData.confirmPassword.length > 0 && (
+                      <Text
+                        style={{
+                          marginTop: 8,
+                          color:
+                            userData.newPassword === userData.confirmPassword
+                              ? "green"
+                              : "red",
+                          fontWeight: "500",
+                          textAlign:"center",
+                        }}
+                      >
+                        {userData.newPassword === userData.confirmPassword
+                          ? "Passwords match!! 😊"
+                          : "Passwords do not match !! 😔"}
+                      </Text>
+                    )}
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Action Buttons */}
@@ -224,7 +395,9 @@ const AccountSettings: React.FC = () => {
                     style={[styles.button, styles.cancelButton]}
                     onPress={() => setIsEditing(false)}
                   >
-                    <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                    <Text style={[styles.buttonText, styles.cancelButtonText]}>
+                      Cancel
+                    </Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -237,24 +410,6 @@ const AccountSettings: React.FC = () => {
                 </TouchableOpacity>
               )}
             </View>
-
-            {/* Security Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Security</Text>
-
-              <TouchableOpacity style={styles.securityItem} onPress={resetPassword}>
-                <View style={styles.securityLeft}>
-                  <Ionicons name="key-outline" size={22} color="#00afa1ff" />
-                  <View style={styles.securityTextContainer}>
-                    <Text style={styles.securityTitle}>Reset Password</Text>
-
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#999" />
-              </TouchableOpacity>
-
-
-            </View>
           </ScrollView>
         </View>
       </View>
@@ -265,17 +420,16 @@ const AccountSettings: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f6f7f8ff',
-    paddingBottom: 40,
-    paddingTop: 30
+    backgroundColor: "#00AF9F",
+    paddingTop: 35,
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
 
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     zIndex: 10,
     padding: 8,
@@ -289,21 +443,21 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingVertical: 25,
-    alignItems: 'center',
+    alignItems: "center",
   },
 
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   formContainer: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: "#f8f8f8",
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
@@ -313,26 +467,26 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   value: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
@@ -340,54 +494,54 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 15,
     borderRadius: 8,
     marginBottom: 10,
   },
   editButton: {
-    backgroundColor: '#00afa1ff',
+    backgroundColor: "#4caf50",
   },
   saveButton: {
-    backgroundColor: '#4caf50',
+    backgroundColor: "#4caf50",
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginLeft: 8,
   },
   cancelButtonText: {
-    color: '#333',
+    color: "#333",
   },
   section: {
     marginBottom: 30,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 15,
   },
   securityItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 10,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   securityLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   securityTextContainer: {
@@ -396,13 +550,13 @@ const styles = StyleSheet.create({
   },
   securityTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 4,
   },
   securityDescription: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
 });
 
