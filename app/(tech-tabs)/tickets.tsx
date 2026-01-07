@@ -31,6 +31,7 @@ interface TicketItem {
   subject: string;
   date: string;
   priority_level: string;
+  subscription_id: string;
 }
 
 const Ticket: React.FC = () => {
@@ -98,6 +99,7 @@ const Ticket: React.FC = () => {
         subject: t.subject || "No subject",
         date: t.created_at || new Date().toISOString(),
         priority_level: t.priority_level || "",
+        subscription_id: t.subscription_id || "",
       }));
 
       setTickets(mappedTickets);
@@ -428,7 +430,7 @@ const Ticket: React.FC = () => {
                           <View style={styles.ticketId}>
                             <Ionicons
                               name="ticket-outline"
-                              size={12}
+                              size={15}
                               color="#6B7280"
                             />
                             <Text style={styles.ticketIdText}>{ticket.id}</Text>
@@ -478,19 +480,20 @@ const Ticket: React.FC = () => {
                       {/* Compact Content */}
                       <View style={styles.contentRow}>
                         <View style={styles.textContainer}>
-                          <Text style={styles.subjectText} numberOfLines={2}>
-                            {ticket.subject}
-                          </Text>
+                          
                           <View style={styles.clientRow}>
                             <Ionicons
                               name="person-outline"
-                              size={12}
+                              size={15}
                               color="#6B7280"
                             />
                             <Text style={styles.clientName} numberOfLines={1}>
-                              {ticket.clientName}
+                              {ticket.clientName} - {ticket.subscription_id}
                             </Text>
                           </View>
+                          <Text style={styles.subjectText} numberOfLines={2}>
+                            {ticket.subject?.toUpperCase()}
+                          </Text>
                         </View>
                         <View>
                           <View style={styles.dateTime}>
@@ -834,8 +837,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   subjectText: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "100",
     color: "#111827",
     lineHeight: 20,
     marginBottom: 6,
@@ -848,10 +851,11 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   clientName: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
+    fontSize: 15,
+    color: "#000000ff",
+    fontWeight: "800",
     flex: 1,
+    paddingBottom: 5,
   },
   dateTime: {
     flexDirection: "row",

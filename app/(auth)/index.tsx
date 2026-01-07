@@ -19,7 +19,7 @@ const IndexScreen = () => {
   const logoScaleAnim = useRef(new Animated.Value(0)).current;
   const logoOpacityAnim = useRef(new Animated.Value(0)).current;
   const [text, setText] = useState('');
-  const appName = "KazibufastTech";
+  const appName = "KAZIBUFASTTECH";
   const [index, setIndex] = useState(0);
 
   const router = useRouter(); // Initialize router

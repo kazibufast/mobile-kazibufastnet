@@ -160,7 +160,7 @@ export default function TimeInScreen() {
       
       if (res.ok) {
         Alert.alert('Success', 'Time out recorded successfully!', [
-          { text: 'OK', onPress: () => router.push('/') }
+          { text: 'OK', onPress: () => router.push('/(auth)/login') }
         ]);
       } else {
         const err = await res.json();

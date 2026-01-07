@@ -1,21 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleProp, ViewStyle } from "react-native";
-
 import {
   Alert,
+  Dimensions,
   Image,
+  Modal,
   Platform,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import { getToken } from "../scripts/token";
 import RejectedButton from "./Modal/RejectedButton";
@@ -30,7 +34,6 @@ type TicketButtonProps = {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 };
-
 
 interface TicketItem {
   id: string;
@@ -51,41 +54,30 @@ interface TicketItem {
 
 const TicketActionButtons: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
-
   const [status, setStatus] = useState<TicketStatus>("pending");
   const [ticket, setTicket] = useState<TicketItem | null>(null);
-
   const [remarks, setRemarks] = useState("");
-  const [deviceUse, setDeviceUse] = useState(""); // Device use for wireless
-  const [ipAddress, setIpAddress] = useState(""); // IP Address
-  const [macAddress, setMacAddress] = useState(""); // Mac Address
-  const [pppoeName, setPppoeName] = useState(""); // PPPOE Name for wireless
-  const [lcpNumber, setLcpNumber] = useState(""); // LCP number for wired
-  const [napNumber, setNapNumber] = useState(""); // NAP number for wired
-  const [portNumber, setPortNumber] = useState(""); // Port number for wired
-  const [tagNumber, setTagNumber] = useState(""); // Tag number for wired
+  const [deviceUse, setDeviceUse] = useState("");
+  const [ipAddress, setIpAddress] = useState("");
+  const [macAddress, setMacAddress] = useState("");
+  const [pppoeName, setPppoeName] = useState("");
+  const [lcpNumber, setLcpNumber] = useState("");
+  const [napNumber, setNapNumber] = useState("");
+  const [portNumber, setPortNumber] = useState("");
+  const [tagNumber, setTagNumber] = useState("");
   const [connectionType, setConnectionType] = useState("");
   const [vlanId, setVlanId] = useState("");
   const [location, setLocation] = useState("");
   const [pictureCause, setPictureCause] = useState<string | null>(null);
   const [pictureReading, setPictureReading] = useState<string | null>(null);
-  const [installationDate, setInstallationDate] = useState(new Date()); // Default date
+  const [installationDate, setInstallationDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const [isCompleted, setIsCompleted] = useState(false); // To track completion status
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
-  const handleImageClick = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
-    setIsModalVisible(true); // Show the modal
-  };
-
-  const handleCloseModal = () => {
-    setIsModalVisible(false); // Hide the modal
-    setSelectedImage(null); // Clear the selected image
-  };
+  const [isCompleted, setIsCompleted] = useState(false);
+  
+  // Modal states
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState<string>("");
+  const [modalImageTitle, setModalImageTitle] = useState<string>("");
 
   /* ---------------- FETCH TICKET ---------------- */
 
@@ -128,8 +120,6 @@ const TicketActionButtons: React.FC = () => {
         pictureCause: t.picture,
         pictureReading: t.picture_reading,
       });
-
-      console.log(ticket?.pictureCause);
 
       setStatus(normalizedStatus);
 
@@ -204,6 +194,30 @@ const TicketActionButtons: React.FC = () => {
     Alert.alert("Rescheduled", "Ticket rescheduled successfully");
   };
 
+  /* ---------------- MODAL FUNCTIONS ---------------- */
+
+  const openImageModal = (imageUrl: string, title: string) => {
+    if (!imageUrl) {
+      Alert.alert("No Image", "No image available to preview");
+      return;
+    }
+    
+    // Construct full URL for images from backend
+    const fullImageUrl = imageUrl.startsWith('http') 
+      ? imageUrl 
+      : `https://tub.kazibufastnet.com/storage/${imageUrl}`;
+    
+    setModalImageUrl(fullImageUrl);
+    setModalImageTitle(title);
+    setIsImageModalVisible(true);
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalVisible(false);
+    setModalImageUrl("");
+    setModalImageTitle("");
+  };
+
   /* ---------------- LOCATION ---------------- */
 
   const getCurrentLocation = async () => {
@@ -272,9 +286,9 @@ const TicketActionButtons: React.FC = () => {
       formData.append("remarks", remarks);
       formData.append("location", location);
 
-      formData.append("device_use", deviceUse  || '');
-      formData.append("ip_address", ipAddress || '');
-      formData.append("mac_address", macAddress || '');
+      formData.append("device_use", deviceUse || "");
+      formData.append("ip_address", ipAddress || "");
+      formData.append("mac_address", macAddress || "");
       formData.append(
         "installation_date",
         installationDate.toLocaleDateString()
@@ -288,11 +302,11 @@ const TicketActionButtons: React.FC = () => {
 
       // Append fields for wired connection (LCP number, NAP number, etc.)
       if (connectionType === "wired") {
-        formData.append("lcp_no", lcpNumber || '');
-        formData.append("nap_no", napNumber || '');
-        formData.append("port_no", portNumber || '');
-        formData.append("tag_no", tagNumber || '');
-        formData.append("vlan_id", vlanId || '');
+        formData.append("lcp_no", lcpNumber || "");
+        formData.append("nap_no", napNumber || "");
+        formData.append("port_no", portNumber || "");
+        formData.append("tag_no", tagNumber || "");
+        formData.append("vlan_id", vlanId || "");
       }
 
       const appendImage = (fieldName: string, uri: string | null) => {
@@ -311,14 +325,13 @@ const TicketActionButtons: React.FC = () => {
       };
 
       appendImage("picture_cause", pictureCause);
-      appendImage("picture_reading", pictureReading); // <-- use pending, not reading
+      appendImage("picture_reading", pictureReading);
 
       const response = await fetch(url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
-          // DO NOT set Content-Type! fetch handles multipart boundary
         },
         body: formData,
       });
@@ -327,10 +340,10 @@ const TicketActionButtons: React.FC = () => {
       console.log(data);
 
       if (data.status === "success") {
-        setIsCompleted(true); // Mark the ticket as completed
-        setRemarks(remarks); // Save the remarks after completion
-        setPictureCause(pictureCause); // Save the image
-        setPictureReading(pictureReading); // Save the image
+        setIsCompleted(true);
+        setRemarks(remarks);
+        setPictureCause(pictureCause);
+        setPictureReading(pictureReading);
         Alert.alert("Success!", "Ticket completed successfully");
         router.push("/(tech-tabs)/tickets");
       } else {
@@ -365,28 +378,27 @@ const TicketActionButtons: React.FC = () => {
       Alert.alert("Error", "Failed to start work");
     }
   };
+  
   const ImageMessage = (ticket: TicketItem | null): string => {
     if (ticket === null || ticket.type === undefined) {
       return "No Ticket";
     }
 
-    // Now we can safely access ticket.type
     const type = ticket.type;
     if (type === "repair") {
-      return "Picture-Cause";
+      return "Photo of Cause";
     } else {
-      return "Picture of Client/Speed Test";
+      return "Photo of Client/Speed Test";
     }
   };
 
   const handleConnectionTypeChange = (itemValue: string) => {
-    setConnectionType(itemValue); // Set the selected connection type
-    // Reset fields based on the selected connection type
+    setConnectionType(itemValue);
     if (itemValue === "wireless") {
-      setDeviceUse(""); // Reset wireless-specific fields
+      setDeviceUse("");
       setPppoeName("");
     } else if (itemValue === "wired") {
-      setLcpNumber(""); // Reset wired-specific fields
+      setLcpNumber("");
       setNapNumber("");
       setPortNumber("");
       setTagNumber("");
@@ -400,10 +412,37 @@ const TicketActionButtons: React.FC = () => {
     setInstallationDate(currentDate);
   };
 
-  console.log("hi " + ticket?.type);
-
   return (
     <View style={styles.actionButtonsContainer}>
+      {/* IMAGE PREVIEW MODAL */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeImageModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{modalImageTitle}</Text>
+              <TouchableOpacity onPress={closeImageModal} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: modalImageUrl }}
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
+            </View>
+            
+            
+          </View>
+        </View>
+      </Modal>
+
       {status === "pending" && !isCompleted && (
         <View style={styles.pendingContainer}>
           <Text style={styles.sectionTitle}>Ticket Actions</Text>
@@ -640,10 +679,15 @@ const TicketActionButtons: React.FC = () => {
             <Text style={styles.inputLabel}>{ImageMessage(ticket)}</Text>
             {pictureCause ? (
               <View style={styles.imagePreviewContainer}>
-                <Image
-                  source={{ uri: pictureCause }}
-                  style={styles.imagePreview}
-                />
+                <TouchableOpacity 
+                  onPress={() => openImageModal(pictureCause, ImageMessage(ticket))}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: pictureCause }}
+                    style={styles.imagePreview}
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={() => removeImage(setPictureCause, "Cause")}
@@ -664,13 +708,18 @@ const TicketActionButtons: React.FC = () => {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.inputLabel}>Picture of Reading</Text>
+            <Text style={styles.inputLabel}>Photo of Reading</Text>
             {pictureReading ? (
               <View style={styles.imagePreviewContainer}>
-                <Image
-                  source={{ uri: pictureReading }}
-                  style={styles.imagePreview}
-                />
+                <TouchableOpacity 
+                  onPress={() => openImageModal(pictureReading, "Photo of Reading")}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: pictureReading }}
+                    style={styles.imagePreview}
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={() => removeImage(setPictureReading, "Pending")}
@@ -722,36 +771,44 @@ const TicketActionButtons: React.FC = () => {
               {remarks || "No remarks added"}
             </Text>
           </View>
-
+          
+          {/* Cause Picture */}
           <View style={styles.formSection}>
-            <Text style={styles.inputLabel}> {ImageMessage(ticket)}</Text>
-            {pictureCause ? (
-              <Image
-                source={{
-                  uri:
-                    "https://tub.kazibufastnet.com/storage/" +
-                    ticket?.pictureCause,
-                }}
-                style={styles.imagePreview}
-              />
+            <Text style={styles.inputLabel}>{ImageMessage(ticket)}</Text>
+            {ticket?.pictureCause ? (
+              <TouchableOpacity 
+                onPress={() => openImageModal(ticket.pictureCause, ImageMessage(ticket))}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={{
+                    uri: `https://tub.kazibufastnet.com/storage/${ticket.pictureCause}`,
+                  }}
+                  style={styles.imagePreview}
+                />
+              </TouchableOpacity>
             ) : (
-              <Text>No picture attached</Text>
+              <Text style={styles.noImageText}>No photo attached</Text>
             )}
           </View>
 
+          {/* Reading Picture */}
           <View style={styles.formSection}>
-            <Text style={styles.inputLabel}> Picture Reading</Text>
-            {pictureReading ? (
-              <Image
-                source={{
-                  uri:
-                    "https://tub.kazibufastnet.com/storage/" +
-                    ticket?.pictureReading,
-                }}
-                style={styles.imagePreview}
-              />
+            <Text style={styles.inputLabel}>Photo of Reading</Text>
+            {ticket?.pictureReading ? (
+              <TouchableOpacity 
+                onPress={() => openImageModal(ticket.pictureReading, "Photo of Reading")}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={{
+                    uri: `https://tub.kazibufastnet.com/storage/${ticket.pictureReading}`,
+                  }}
+                  style={styles.imagePreview}
+                />
+              </TouchableOpacity>
             ) : (
-              <Text>No picture attached</Text>
+              <Text style={styles.noImageText}>No photo attached</Text>
             )}
           </View>
 
@@ -777,6 +834,8 @@ const TicketActionButtons: React.FC = () => {
 };
 
 /* ---------------- STYLES ---------------- */
+
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   actionButtonsContainer: { width: "100%" },
@@ -854,7 +913,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dropdown: {
-    height: 60, // Adjust height if necessary
+    height: 60,
     marginTop: 2,
     borderWidth: 1,
     borderColor: "#D1D5DB",
@@ -863,7 +922,12 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: { color: "#6B7280", fontSize: 15, fontWeight: "500" },
   imagePreviewContainer: { position: "relative" },
-  imagePreview: { width: "100%", height: 200, borderRadius: 8 },
+  imagePreview: { 
+    width: "100%", 
+    height: 200, 
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6'
+  },
   removeImageButton: {
     position: "absolute",
     top: 12,
@@ -891,7 +955,6 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: { backgroundColor: "#9CA3AF", opacity: 0.7 },
   submitButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
-
   completedContainer: {
     backgroundColor: "#F7FAFC",
     borderRadius: 10,
@@ -903,12 +966,87 @@ const styles = StyleSheet.create({
   completionDetails: {
     marginBottom: 16,
   },
-
   remarksText: {
-    fontSize: 14, // Sets the font size for the remarks text
-    color: "#2D3748", // A dark gray color for the text to make it easily readable
-    lineHeight: 20, // Ensures enough space between lines for readability
-    marginBottom: 16, // Adds space below the remarks text (creates distance from the next section)
+    fontSize: 14,
+    color: "#2D3748",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  noImageText: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 20,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+  },
+  
+  // Modal Styles
+   modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+  },
+
+  modalContainer: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#000",
+  },
+
+  modalHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+
+  modalTitle: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+
+  imageContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalImage: {
+    width: width,
+    height: height,
+  },
+
+  modalFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+
+  closeModalButton: {
+    backgroundColor: "#EF4444",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+
+  closeModalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 

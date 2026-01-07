@@ -49,7 +49,7 @@ export default function TeamScreen() {
       const token = getToken();
       const user = getUser();
       const response = await fetch(
-        "https://tub.kazibufastnet.com/api/tech/team/" + user?.team_id,
+        "https://tub.kazibufastnet.com/api/tech/team",
         {
           method: "GET",
           headers: {
@@ -58,10 +58,6 @@ export default function TeamScreen() {
           },
         }
       );
-
-      if (!response.ok) {
-        Alert.alert("Sorry! please check network connection..");
-      }
       const data = await response.json();
 
       if (!data.team || data.team_id != null) {
@@ -100,7 +96,7 @@ export default function TeamScreen() {
   const handleComment = async (comments: string) => {
     if (!team?.id) return;
 
-    const url = `https://tub.kazibufastnet.com/api/tech/team/comments/${team.id}`;
+    const url = `https://tub.kazibufastnet.com/api/tech/team/comments`;
 
     try {
       const token = await getToken();
@@ -242,17 +238,7 @@ export default function TeamScreen() {
                   size={24}
                   color="#00AF9F"
                 />
-                <Text style={styles.teamName}>{team.teamName}</Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusColor(team.status) },
-                ]}
-              >
-                <Text style={styles.statusText}>
-                  {team.status?.toUpperCase()}
-                </Text>
+                <Text style={styles.teamName}>{team.teamName?.toUpperCase()}</Text>
               </View>
             </View>
           </View>
@@ -330,7 +316,7 @@ export default function TeamScreen() {
                       <Text style={styles.memberName} numberOfLines={1}>
                         {member}
                       </Text>
-                      <Text style={styles.memberRole}>Technician</Text>
+                      <Text style={styles.memberRole}>Technicias</Text>
                     </View>
                     <View style={styles.memberIndex}></View>
                   </View>
@@ -466,7 +452,7 @@ const styles = StyleSheet.create({
   emptyScrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    backgroundColor: "#37638fff",
+    backgroundColor: "#ffffffff",
   },
   emptyWrapper: {
     alignItems: "center",
@@ -551,7 +537,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#000000ff",
     letterSpacing: 0.5,
   },
   infoCard: {

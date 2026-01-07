@@ -14,8 +14,8 @@ export default function TechTabsLayout() {
 
   const technicianTabs = [
     { name: 'home', title: 'Home', icon: 'home-outline' },
-    { name: 'team', title: 'Team', icon: 'people-outline' },
     { name: 'tickets', title: 'Tickets', icon: 'ticket-outline' },
+    { name: 'team', title: 'Team', icon: 'people-outline' },
     { name: 'profile', title: 'Profile', icon: 'person-outline' },
   ];
 

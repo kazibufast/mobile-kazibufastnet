@@ -58,7 +58,7 @@ const Profile: React.FC = () => {
             }
           >
             <View style={styles.profileHeader}>
-              <Text style={styles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}> {user?.name || 'Guest'}</Text>
+              <Text style={styles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}> {(user?.name).toUpperCase() || 'Guest'.toUpperCase()}</Text>
               <Text style={styles.userEmail}>{user?.mobile_number || '+63 912 3456 789'}</Text>
             </View>
 

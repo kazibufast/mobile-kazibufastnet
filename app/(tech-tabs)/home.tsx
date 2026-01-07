@@ -1,8 +1,11 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Animated,
   Dimensions,
+  Image,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,7 +18,7 @@ import Header from "../../components/Header";
 import { getToken } from "../../scripts/token";
 import { getUser } from "../../scripts/user";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const scaleSize = (size: number) => {
   const baseWidth = 375;
@@ -45,12 +48,12 @@ const Home: React.FC = () => {
     id: string;
     clientName: string;
     status:
-      | "Open"
-      | "Pending"
-      | "InProgress"
-      | "Accepted"
-      | "Completed"
-      | "Closed";
+    | "Open"
+    | "Pending"
+    | "InProgress"
+    | "Accepted"
+    | "Completed"
+    | "Closed";
     type: "Repair" | "Installation" | null;
     subject: string;
     date: string;
@@ -59,6 +62,15 @@ const Home: React.FC = () => {
     technician_id?: string;
     priority_level?: string;
   };
+
+  interface WeatherData {
+    name: string;
+    main: {
+      temp: number;
+      humidity: number;
+    };
+    weather: { main: string, description: string }[];
+  }
 
   const router = useRouter();
   const user = getUser();
@@ -70,6 +82,12 @@ const Home: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
 
+
+  const [city, setCity] = useState<string>('');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+
   // tickets
   const [openTickets, setOpenTickets] = useState(0);
   const [pendingTickets, setPendingTickets] = useState(0);
@@ -77,9 +95,10 @@ const Home: React.FC = () => {
   const [closedTickets, setClosedTickets] = useState(0);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [greeting] = useState(new Animated.Value(0));
 
   const stats = {
-     activeTickets: openTickets,
+    activeTickets: openTickets,
     pending: pendingTickets,
     completed: completedTickets,
     closed: closedTickets,
@@ -103,21 +122,16 @@ const Home: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "open":
-      case "in progress":
-        return "clock";
-      case "assigned":
-        return "account-check";
-      case "completed":
-        return "check-circle";
-      case "pending":
-        return "pause-circle";
-      case "closed":
-        return "archive-check";
+  const getPriorityColor = (priority?: string) => {
+    switch (priority?.toLowerCase()) {
+      case "high priority":
+        return "#EF4444";
+      case "medium priority":
+        return "#F59E0B";
+      case "low priority":
+        return "#10B981";
       default:
-        return "ticket-outline";
+        return "#ffffffff";
     }
   };
 
@@ -172,17 +186,14 @@ const Home: React.FC = () => {
         date: t.date_issued || new Date().toISOString(),
         team_id: t.team_id || "",
         priority_level: t.priority_level,
-        
       }));
 
       const apiTickets: Ticket[] = Array.isArray(data.tickets)
         ? data.tickets
         : [];
-      console.log(mappedTickets);
-      // const priority_level= getPriorityStatus(t.priority_level);
+
       setTickets(mappedTickets);
-      
-      
+
       // Stats
       setOpenTickets(
         apiTickets.filter(
@@ -209,8 +220,8 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     fetchTickets();
+    fetchWeather();
 
-    // Update time every minute
     const interval = setInterval(() => {
       const now = new Date();
       setCurrentTime(
@@ -250,20 +261,107 @@ const Home: React.FC = () => {
     return "Good evening";
   };
 
-  const getPriorityStatus = (priority_level: Ticket["priority_level"]) => {
-    switch (priority_level) {
-      case "low priority":
-        return { icon: "build-outline", color: "#059669" };
-      case "high priority":
-        return { icon: "construct-outline", color: "#D97706" };
+  const firstName = user?.name?.split(" ")[0] || "Technician";
+
+  // Animated greeting
+  useEffect(() => {
+    Animated.spring(greeting, {
+      toValue: 1,
+      tension: 20,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const greetingStyle = {
+    transform: [
+      {
+        translateY: greeting.interpolate({
+          inputRange: [0, 1],
+          outputRange: [20, 0],
+        }),
+      },
+    ],
+    opacity: greeting,
+  };
+
+  const getWeatherIcon = (condition: string) => {
+    switch (condition.toLowerCase()) {
+      case "clear":
+         return <Image
+          source={require("../../assets/images/clear-sky.png")}
+          style={styles.icon}
+          resizeMode="contain"
+        />
+      case "clouds":
+        return <Image
+          source={require("../../assets/images/cloudy.png")}
+          style={styles.icon}
+          resizeMode="contain"
+        />
+      case "rain":
+        return <Image
+          source={require("../../assets/images/rainy-day.png")}
+          style={styles.icon}
+          resizeMode="contain"
+        />
+      case "thunderstorm":
+        return <Image
+          source={require("../../assets/images/thunder.png")}
+          style={styles.icon}
+          resizeMode="contain"
+        />
+
       default:
-        return { icon: "help-circle-outline", color: "#EF4444" };
+        return <Image
+          source={require("../../assets/images/cloudy.png")}
+          style={styles.icon}
+          resizeMode="contain"
+        />
     }
   };
 
-  const firstName = user?.name?.split(" ")[0] || "Technician";
 
-  
+
+  const fetchWeather = async () => {
+    setWeatherLoading(true);
+    setWeather(null);
+
+    try {
+      const response = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?q=Tubigon&appid=20c5be33c71294fe1a5100a7ae1ff885`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch weather");
+      }
+
+      // Check if the weather condition is being fetched correctly
+
+
+      const data = await response.json(); // ✅ IMPORTANT
+
+      // Check if data is available and has weather information
+      if (data.weather && data.weather.length > 0) {
+        setWeather(data);
+        console.log(weather?.weather[0].main);
+      } else {
+        throw new Error("Invalid weather data");
+      }
+    } catch (err) {
+      setError("Error fetching weather data.");
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+
 
 
 
@@ -279,100 +377,127 @@ const Home: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00AFA1"
-            colors={["#00AFA1"]}
+            tintColor="#00AF9F"
+            colors={["#00AF9F"]}
             progressBackgroundColor="#FFFFFF"
           />
         }
       >
         {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
+        <Animated.View style={[styles.welcomeSection, greetingStyle]}>
           <View style={styles.welcomeHeader}>
             <View>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.name}>{firstName}!</Text>
+              <View style={styles.greetingRow}>
+                <Text style={styles.greeting}>{getGreeting()}</Text>
+              </View>
+              <Text style={styles.name}>{firstName?.toUpperCase()}!</Text>
+              <Text style={styles.dateText}>{currentDate}</Text>
             </View>
+
+            {weather && !weatherLoading ? (
+              <View style={{ flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <Text style={{ fontSize: 12, color: "#6B7280" }}>
+                  {/* Convert temperature from Kelvin to Celsius */}
+                  {(weather.main.temp - 273.15).toFixed(1)}°C · {weather.weather[0].main}
+                </Text>
+
+                {/* Render the image dynamically */}
+                {getWeatherIcon(weather.weather[0].main)}
+              </View>
+            ) : (
+              <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+                Weather not loaded
+              </Text>
+            )}
           </View>
+        </Animated.View>
 
-          <Text style={styles.dateText}>{currentDate}</Text>
-
-          <View style={styles.roleBadge}>
+        {/* Stats Cards */}
+        <View style={styles.statsSection}>
+          <View style={styles.statsHeader}>
             <MaterialCommunityIcons
-              name="toolbox-outline"
-              size={scaleSize(14)}
-              color="#FFFFFF"
+              name="chart-box-outline"
+              size={scaleSize(20)}
+              color="#1F2937"
             />
-            <Text style={styles.roleText}>Technician</Text>
+            <Text style={styles.statsTitle}>Ticket Overview</Text>
           </View>
-        </View>
 
-        {/* Quick Stats Cards */}
-        <View style={styles.quickStatsSection}>
-          <View style={styles.statsRow}>
+          <View style={styles.statsGrid}>
             <TouchableOpacity
-              style={[styles.quickStatCard, { backgroundColor: "#3B82F6" }]}
+              style={styles.statCard}
               onPress={() => router.push("/tickets?status=open")}
               activeOpacity={0.85}
             >
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, { backgroundColor: "#DBEAFE" }]}
+              >
                 <MaterialCommunityIcons
                   name="ticket-confirmation"
-                  size={scaleSize(26)}
-                  color="#FFFFFF"
+                  size={scaleSize(22)}
+                  color="#3B82F6"
                 />
               </View>
-              <Text style={styles.quickStatNumber}>{stats.activeTickets}</Text>
-              <Text style={styles.quickStatLabel}>Active</Text>
+              <Text style={styles.statNumber}>{stats.activeTickets}</Text>
+              <Text style={styles.statLabel}>Open Tickets</Text>
+              <View style={[styles.statIndicator, { backgroundColor: "#3B82F6" }]} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickStatCard, { backgroundColor: "#F59E0B" }]}
+              style={styles.statCard}
               onPress={() => router.push("/tickets?status=pending")}
               activeOpacity={0.85}
             >
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, { backgroundColor: "#FEF3C7" }]}
+              >
                 <MaterialCommunityIcons
                   name="clock-alert"
-                  size={scaleSize(26)}
-                  color="#FFFFFF"
+                  size={scaleSize(22)}
+                  color="#F59E0B"
                 />
               </View>
-              <Text style={styles.quickStatNumber}>{stats.pending}</Text>
-              <Text style={styles.quickStatLabel}>Pending</Text>
+              <Text style={styles.statNumber}>{stats.pending}</Text>
+              <Text style={styles.statLabel}>Pending Tickets</Text>
+              <View style={[styles.statIndicator, { backgroundColor: "#F59E0B" }]} />
             </TouchableOpacity>
-          </View>
 
-          <View style={styles.statsRow}>
             <TouchableOpacity
-              style={[styles.quickStatCard, { backgroundColor: "#10B981" }]}
+              style={styles.statCard}
               onPress={() => router.push("/tickets?status=completed")}
               activeOpacity={0.85}
             >
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, { backgroundColor: "#D1FAE5" }]}
+              >
                 <MaterialCommunityIcons
                   name="check-circle"
-                  size={scaleSize(26)}
-                  color="#FFFFFF"
+                  size={scaleSize(22)}
+                  color="#10B981"
                 />
               </View>
-              <Text style={styles.quickStatNumber}>{stats.completed}</Text>
-              <Text style={styles.quickStatLabel}>Completed</Text>
+              <Text style={styles.statNumber}>{stats.completed}</Text>
+              <Text style={styles.statLabel}>Completed Tickets</Text>
+              <View style={[styles.statIndicator, { backgroundColor: "#10B981" }]} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickStatCard, { backgroundColor: "#6B7280" }]}
+              style={styles.statCard}
               onPress={() => router.push("/tickets?status=closed")}
               activeOpacity={0.85}
             >
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, { backgroundColor: "#F3F4F6" }]}
+              >
                 <MaterialCommunityIcons
                   name="archive-check"
-                  size={scaleSize(26)}
-                  color="#FFFFFF"
+                  size={scaleSize(22)}
+                  color="#6B7280"
                 />
               </View>
-              <Text style={styles.quickStatNumber}>{stats.closed}</Text>
-              <Text style={styles.quickStatLabel}>Closed</Text>
+              <Text style={styles.statNumber}>{stats.closed}</Text>
+              <Text style={styles.statLabel}>Closed Tickets</Text>
+              <View style={[styles.statIndicator, { backgroundColor: "#6B7280" }]} />
             </TouchableOpacity>
           </View>
         </View>
@@ -388,32 +513,22 @@ const Home: React.FC = () => {
                   color="#1F2937"
                 />
                 <Text style={styles.sectionTitle}>Assigned Tickets</Text>
+                <View style={styles.ticketCountBadge}>
+                  <Text style={styles.ticketCountText}>
+                    {assignedTickets.length}
+                  </Text>
+                </View>
               </View>
               <Text style={styles.sectionSubtitle}>
-                {assignedTickets.length} ticket
-                {assignedTickets.length !== 1 ? "s" : ""} • Tap to view details
+                Tickets assigned to you and your team
               </Text>
             </View>
-            {assignedTickets.length > 0 && (
-              <TouchableOpacity
-                style={styles.viewAllButton}
-                onPress={() => router.push("/tickets")}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.viewAllText}>View All</Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={scaleSize(16)}
-                  color="#00AFA1"
-                />
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Loading State */}
           {loading && (
             <View style={styles.loadingState}>
-              {[1, 2, 3].map((i) => (
+              {[1, 2].map((i) => (
                 <View key={i} style={styles.skeletonCard}>
                   <View style={styles.skeletonIcon} />
                   <View style={styles.skeletonContent}>
@@ -421,6 +536,7 @@ const Home: React.FC = () => {
                     <View style={styles.skeletonSubtitle} />
                     <View style={styles.skeletonMeta} />
                   </View>
+                  <View style={styles.skeletonArrow} />
                 </View>
               ))}
             </View>
@@ -429,83 +545,88 @@ const Home: React.FC = () => {
           {/* Tickets List */}
           {!loading && assignedTickets.length > 0 && (
             <View style={styles.ticketsList}>
-              {assignedTickets.slice(0, 5).map((ticket, index) => (
-             
+              {assignedTickets.slice(0, 3).map((ticket, index) => (
                 <TouchableOpacity
                   key={ticket.id}
                   style={[
                     styles.ticketCard,
-                    index === assignedTickets.slice(0, 5).length - 1 &&
-                      styles.lastCard,
+                    index === assignedTickets.slice(0, 3).length - 1 &&
+                    styles.lastCard,
                   ]}
                   onPress={() => router.push(`/tickets/${ticket.id}`)}
                   activeOpacity={0.7}
                 >
-                  {/* Ticket Info */}
-                  <View style={styles.ticketInfo}>
-                    <View style={styles.ticketHeader}>
-                      <Text style={styles.ticketSubject} numberOfLines={1}>
+                  <View style={styles.ticketHeader}>
+
+                    <View style={styles.ticketInfo}>
+                      <Text style={styles.ticketSubject} numberOfLines={2}>
                         {ticket.subject}
                       </Text>
-                      <View>
-                        <Text
-  style={[
-    styles.priority,
-    { color: getPriorityStatus(ticket.priority_level).color },
-  ]}
->
-  {(ticket.priority_level || "").toUpperCase()}
-</Text>
+                      <View style={styles.ticketMeta}>
+                        <View style={styles.clientInfo}>
+                          <MaterialCommunityIcons
+                            name="account-outline"
+                            size={scaleSize(12)}
+                            color="#6B7280"
+                          />
+                          <Text style={styles.ticketClient} numberOfLines={1}>
+                            {ticket.clientName}
+                          </Text>
+                        </View>
 
-                      </View>
-                    </View>
 
-                    <View style={styles.clientRow}>
-                      <MaterialCommunityIcons
-                        name="account-outline"
-                        size={scaleSize(14)}
-                        color="#2763dcff"
-                      />
-                      <Text style={styles.ticketClient}>
-                        {ticket?.clientName || "NULL"}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metaRow}>
-                      <View style={styles.statusContainer}>
-                        <View
-                          style={[
-                            styles.statusDot,
-                            { backgroundColor: getStatusColor(ticket.status) },
-                          ]}
-                        />
-                        <Text style={styles.ticketStatus}>
-                          {ticket.status.charAt(0).toUpperCase() +
-                            ticket.status.slice(1).toLowerCase()}
-                        </Text>
-                      </View>
-
-                      <View style={styles.separator} />
-
-                      <View style={styles.timeContainer}>
-                        <MaterialCommunityIcons
-                          name="clock-outline"
-                          size={scaleSize(12)}
-                          color="#9CA3AF"
-                        />
+                        <View style={styles.separator} />
                         <Text style={styles.ticketDate}>
                           {formatDate(ticket.date)}
                         </Text>
                       </View>
                     </View>
+                    <View style={styles.ticketRightSection}>
+                      <View
+                        style={[
+                          styles.priorityBadge,
+                          {
+                            backgroundColor: getPriorityColor(
+                              ticket.priority_level
+                            ) + "20",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.priorityText,
+                            {
+                              color: getPriorityColor(ticket.priority_level),
+                            },
+                          ]}
+                        >
+                          {ticket.priority_level?.split(" ")[0] || ""}
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={scaleSize(20)}
+                        color="#D1D5DB"
+                      />
+                    </View>
                   </View>
-
-                  {/* Arrow indicator */}
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={scaleSize(20)}
-                    color="#D1D5DB"
-                  />
+                  <View style={styles.ticketFooter}>
+                    <View style={styles.statusContainer}>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: getStatusColor(ticket.status) },
+                        ]}
+                      />
+                      <Text style={styles.ticketStatus}>
+                        {ticket.status.charAt(0).toUpperCase() +
+                          ticket.status.slice(1).toLowerCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.ticketId}>
+                      <Text style={styles.ticketIdText}>#{ticket.id}</Text>
+                    </View>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -520,22 +641,26 @@ const Home: React.FC = () => {
                   size={scaleSize(64)}
                   color="#E5E7EB"
                 />
-                <View style={styles.emptyIconOverlay}>
-                  <MaterialCommunityIcons
-                    name="plus"
-                    size={scaleSize(24)}
-                    color="#9CA3AF"
-                  />
-                </View>
               </View>
               <Text style={styles.emptyStateTitle}>No tickets assigned</Text>
               <Text style={styles.emptyStateSubtitle}>
                 Tickets assigned to your team will appear here
               </Text>
+              <TouchableOpacity
+                style={styles.refreshEmptyButton}
+                onPress={fetchTickets}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="refresh"
+                  size={scaleSize(16)}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.refreshEmptyText}>Refresh</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
-
         {/* Error State */}
         {error && (
           <View style={styles.errorContainer}>
@@ -551,7 +676,7 @@ const Home: React.FC = () => {
               onPress={fetchTickets}
               activeOpacity={0.8}
             >
-              <Text style={styles.retryText}>Retry</Text>
+              <Text style={styles.retryText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -563,159 +688,223 @@ const Home: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#00AF9F",
-    paddingTop: 35,
+    backgroundColor: "#F8FAFC",
+    paddingTop: Platform.OS === "ios" ? 35 : 30,
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: scaleSize(30),
+    paddingBottom: scaleSize(40),
     backgroundColor: "#fff",
-  },
-  priority: {
-    alignSelf: "flex-end",
-    fontSize: 16,
-    fontWeight: "bold",
   },
 
   // Welcome Section
   welcomeSection: {
     paddingHorizontal: scaleSize(20),
     paddingTop: scaleSize(20),
-    paddingBottom: scaleSize(20),
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomLeftRadius: scaleSize(24),
+    borderBottomRightRadius: scaleSize(24),
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   welcomeHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: scaleSize(8),
+    marginBottom: scaleSize(12),
   },
-  greeting: {
-    fontSize: scaleSize(16),
-    fontWeight: "500",
-    color: "#64748B",
-    marginBottom: scaleSize(4),
-  },
-  name: {
-    fontSize: scaleSize(28),
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  timeContainer: {
+  greetingRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    marginBottom: scaleSize(4),
+  },
+  waveIcon: {
+    marginRight: scaleSize(8),
+  },
+  greeting: {
+    fontSize: scaleSize(15),
+    fontWeight: "500",
+    color: "#64748B",
+  },
+  name: {
+    fontSize: scaleSize(32),
+    fontWeight: "700",
+    color: "#1F2937",
+    letterSpacing: -0.5,
+  },
+  timeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: scaleSize(12),
     paddingVertical: scaleSize(8),
-    borderRadius: scaleSize(12),
+    borderRadius: scaleSize(20),
     gap: scaleSize(6),
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
   timeText: {
     fontSize: scaleSize(14),
     fontWeight: "600",
-    color: "#475569",
+    color: "#000000",
   },
   dateText: {
     fontSize: scaleSize(14),
     color: "#64748B",
-    marginBottom: scaleSize(16),
+    marginBottom: scaleSize(10),
+  },
+  roleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   roleBadge: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "#00AFA1",
+    backgroundColor: "#0F766E",
     paddingHorizontal: scaleSize(14),
     paddingVertical: scaleSize(8),
     borderRadius: scaleSize(20),
     gap: scaleSize(6),
-    shadowColor: "#00AFA1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   roleText: {
     fontSize: scaleSize(13),
     fontWeight: "600",
     color: "#FFFFFF",
   },
+  teamButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDFA",
+    paddingHorizontal: scaleSize(14),
+    paddingVertical: scaleSize(8),
+    borderRadius: scaleSize(20),
+    gap: scaleSize(6),
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  teamButtonText: {
+    fontSize: scaleSize(13),
+    fontWeight: "600",
+    color: "#00AF9F",
+  },
 
-  // Quick Stats
-  quickStatsSection: {
+  // Stats Section
+  statsSection: {
     paddingHorizontal: scaleSize(20),
     paddingTop: scaleSize(24),
-    paddingBottom: scaleSize(16),
-    backgroundColor: "#F8FAFC",
   },
-  statsRow: {
+  statsHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: scaleSize(12),
-    marginBottom: scaleSize(12),
-  },
-  quickStatCard: {
-    flex: 1,
-    borderRadius: scaleSize(20),
-    padding: scaleSize(20),
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    marginBottom: scaleSize(16),
+    gap: scaleSize(10),
+  },
+  statsTitle: {
+    fontSize: scaleSize(18),
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -scaleSize(6),
+  },
+  statCard: {
+    width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: scaleSize(16),
+    padding: scaleSize(16),
+    marginHorizontal: scaleSize(3),
+    marginBottom: scaleSize(12),
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   statIconContainer: {
-    width: scaleSize(48),
-    height: scaleSize(48),
-    borderRadius: scaleSize(24),
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    width: scaleSize(40),
+    height: scaleSize(40),
+    borderRadius: scaleSize(12),
     justifyContent: "center",
     alignItems: "center",
     marginBottom: scaleSize(12),
   },
-  quickStatNumber: {
-    fontSize: scaleSize(32),
+  statNumber: {
+    fontSize: scaleSize(28),
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#1F2937",
     marginBottom: scaleSize(4),
   },
-  quickStatLabel: {
-    fontSize: scaleSize(14),
+  statLabel: {
+    fontSize: scaleSize(13),
     fontWeight: "600",
-    color: "#FFFFFF",
-    opacity: 0.95,
+    color: "#64748B",
+    marginBottom: scaleSize(8),
+  },
+  statIndicator: {
+    height: scaleSize(4),
+    borderRadius: scaleSize(2),
+    width: "100%",
   },
 
   // Tickets Section
   ticketsSection: {
     paddingHorizontal: scaleSize(20),
     paddingTop: scaleSize(24),
-    paddingBottom: scaleSize(40),
-    backgroundColor: "#FFFFFF",
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: scaleSize(20),
+    marginBottom: scaleSize(16),
   },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: 'space-between',
+    width: '100%',
     gap: scaleSize(10),
     marginBottom: scaleSize(6),
+
   },
   sectionTitle: {
-    fontSize: scaleSize(20),
+    fontSize: scaleSize(18),
+    flex: 1,
     fontWeight: "700",
     color: "#1F2937",
+  },
+  ticketCountBadge: {
+    backgroundColor: "#00AF9F",
+    paddingHorizontal: scaleSize(8),
+    paddingVertical: scaleSize(4),
+    borderRadius: scaleSize(12),
+    minWidth: scaleSize(24),
+    alignItems: "center",
+    justifyContent: 'center',
+  },
+  ticketCountText: {
+    fontSize: scaleSize(12),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   sectionSubtitle: {
     fontSize: scaleSize(14),
@@ -727,14 +916,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: scaleSize(4),
     paddingHorizontal: scaleSize(12),
-    paddingVertical: scaleSize(8),
+    paddingVertical: scaleSize(6),
     borderRadius: scaleSize(12),
     backgroundColor: "#F0FDFA",
   },
   viewAllText: {
     fontSize: scaleSize(14),
     fontWeight: "600",
-    color: "#00AFA1",
+    color: "#00AF9F",
   },
 
   // Tickets List
@@ -742,74 +931,97 @@ const styles = StyleSheet.create({
     gap: scaleSize(12),
   },
   ticketCard: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: scaleSize(16),
     padding: scaleSize(16),
     borderWidth: 1,
     borderColor: "#F1F5F9",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   lastCard: {
     marginBottom: 0,
   },
-  statusIndicator: {
-    width: scaleSize(44),
-    height: scaleSize(44),
-    borderRadius: scaleSize(12),
+  ticketHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: scaleSize(12),
+  },
+  ticketTypeIndicator: {
+    width: scaleSize(32),
+    height: scaleSize(32),
+    borderRadius: scaleSize(8),
+    backgroundColor: "#F8FAFC",
     justifyContent: "center",
     alignItems: "center",
     marginRight: scaleSize(12),
   },
   ticketInfo: {
     flex: 1,
-    gap: scaleSize(8),
-  },
-  ticketHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    marginRight: scaleSize(12),
   },
   ticketSubject: {
     fontSize: scaleSize(15),
     fontWeight: "600",
     color: "#111827",
-    flex: 1,
-    marginRight: scaleSize(8),
+    lineHeight: scaleSize(20),
+    marginBottom: scaleSize(8),
   },
-  priorityBadge: {
+  ticketMeta: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF2F2",
-    paddingHorizontal: scaleSize(8),
-    paddingVertical: scaleSize(4),
-    borderRadius: scaleSize(6),
+    gap: scaleSize(8),
+  },
+  clientInfo: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: scaleSize(4),
-  },
-  priorityText: {
-    fontSize: scaleSize(11),
-    fontWeight: "600",
-    color: "#EF4444",
-  },
-  clientRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scaleSize(6),
+    flex: 1,
   },
   ticketClient: {
-    fontSize: scaleSize(13),
+    fontSize: scaleSize(12),
     color: "#6B7280",
     fontWeight: "500",
   },
-  metaRow: {
+  separator: {
+    width: 1,
+    height: scaleSize(12),
+    backgroundColor: "#E5E7EB",
+  },
+  ticketDate: {
+    fontSize: scaleSize(12),
+    color: "#9CA3AF",
+    fontWeight: "500",
+  },
+  ticketRightSection: {
+    alignItems: "flex-end",
+    gap: scaleSize(8),
+  },
+  priorityBadge: {
+    paddingHorizontal: scaleSize(8),
+    paddingVertical: scaleSize(4),
+    borderRadius: scaleSize(6),
+  },
+  priorityText: {
+    fontSize: scaleSize(11),
+    fontWeight: "700",
+  },
+  ticketFooter: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: scaleSize(10),
+    paddingTop: scaleSize(12),
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
   },
   statusContainer: {
     flexDirection: "row",
@@ -826,20 +1038,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#4B5563",
   },
-  separator: {
-    width: 1,
-    height: scaleSize(12),
-    backgroundColor: "#E5E7EB",
+  ticketId: {
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: scaleSize(8),
+    paddingVertical: scaleSize(4),
+    borderRadius: scaleSize(6),
   },
-  timeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scaleSize(4),
+  ticketIdText: {
+    fontSize: scaleSize(11),
+    fontWeight: "600",
+    color: "#6B7280",
   },
-  ticketDate: {
-    fontSize: scaleSize(12),
-    color: "#9CA3AF",
-    fontWeight: "500",
+
+  icon: {
+    width: 70,
+    height: 70,
+    marginTop: 4,
   },
 
   // Loading State
@@ -856,9 +1070,9 @@ const styles = StyleSheet.create({
     borderColor: "#F1F5F9",
   },
   skeletonIcon: {
-    width: scaleSize(44),
-    height: scaleSize(44),
-    borderRadius: scaleSize(12),
+    width: scaleSize(32),
+    height: scaleSize(32),
+    borderRadius: scaleSize(8),
     backgroundColor: "#E5E7EB",
     marginRight: scaleSize(12),
   },
@@ -884,6 +1098,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     borderRadius: scaleSize(4),
   },
+  skeletonArrow: {
+    width: scaleSize(20),
+    height: scaleSize(20),
+    backgroundColor: "#E5E7EB",
+    borderRadius: scaleSize(4),
+  },
 
   // Empty State
   emptyState: {
@@ -892,21 +1112,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: scaleSize(16),
     backgroundColor: "#F9FAFB",
     borderRadius: scaleSize(16),
-    marginTop: scaleSize(8),
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   emptyIconContainer: {
-    position: "relative",
     marginBottom: scaleSize(20),
-  },
-  emptyIconOverlay: {
-    position: "absolute",
-    bottom: -scaleSize(4),
-    right: -scaleSize(4),
-    backgroundColor: "#F3F4F6",
-    borderRadius: scaleSize(12),
-    padding: scaleSize(6),
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
   },
   emptyStateTitle: {
     fontSize: scaleSize(18),
@@ -922,6 +1132,21 @@ const styles = StyleSheet.create({
     marginBottom: scaleSize(24),
     lineHeight: scaleSize(20),
   },
+  refreshEmptyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#00AF9F",
+    paddingHorizontal: scaleSize(20),
+    paddingVertical: scaleSize(12),
+    borderRadius: scaleSize(12),
+    gap: scaleSize(8),
+  },
+  refreshEmptyText: {
+    color: "#FFFFFF",
+    fontSize: scaleSize(15),
+    fontWeight: "600",
+  },
+
 
   // Error State
   errorContainer: {
@@ -931,6 +1156,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEF2F2",
     borderRadius: scaleSize(16),
     marginTop: scaleSize(20),
+    borderWidth: 1,
+    borderColor: "#FECACA",
   },
   errorTitle: {
     fontSize: scaleSize(18),
@@ -956,6 +1183,22 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: scaleSize(15),
     fontWeight: "600",
+  },
+
+  // Refresh Hint
+  refreshHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: scaleSize(12),
+    backgroundColor: "#F8FAFC",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+  refreshHintText: {
+    fontSize: scaleSize(12),
+    color: "#64748B",
+    marginLeft: scaleSize(6),
   },
 });
 
