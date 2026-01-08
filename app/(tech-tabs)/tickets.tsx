@@ -1,9 +1,10 @@
-import { getUser } from "@/scripts/user";
+import { getUser, setUser } from "@/scripts/user";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -17,16 +18,17 @@ import Header from "../../components/Header";
 import { getToken } from "../../scripts/token";
 
 
+
 interface TicketItem {
   id: string;
   clientName: string;
   status:
-    | "Open"
-    | "Pending"
-    | "InProgress"
-    | "Accepted"
-    | "Completed"
-    | "Closed";
+  | "Open"
+  | "Pending"
+  | "InProgress"
+  | "Accepted"
+  | "Completed"
+  | "Closed";
   type: "Repair" | "Installation" | null;
   subject: string;
   date: string;
@@ -42,10 +44,13 @@ const Ticket: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<
-    "all" | "open" | "pending" | "accepted" | "inProgress" | "completed"
+    "all" | "open" | "pending" | "accepted" | "inProgress" | "completed" | "closed"
   >("all");
 
   const user = getUser();
+
+  const params = useLocalSearchParams();
+
 
 
   const fetchTickets = async () => {
@@ -54,7 +59,7 @@ const Ticket: React.FC = () => {
     try {
       const token = await getToken();
       const response = await fetch(
-        "https://tub.kazibufastnet.com/api/tech/tickets/" + user?.team_id,
+        "https://tub.kazibufastnet.com/api/tech/tickets",
         {
           method: "GET",
           headers: {
@@ -62,8 +67,8 @@ const Ticket: React.FC = () => {
             Accept: "application/json",
           },
         }
-      ); 
-      
+      );
+
 
       if (!response.ok) {
         const errorDetails = await response.text();
@@ -74,7 +79,9 @@ const Ticket: React.FC = () => {
 
       const data = await response.json();
 
-     
+      setUser(data.user);
+
+
 
       const normalizeStatus = (status: string): TicketItem["status"] => {
         const s = status.toLowerCase();
@@ -99,12 +106,12 @@ const Ticket: React.FC = () => {
         subject: t.subject || "No subject",
         date: t.created_at || new Date().toISOString(),
         priority_level: t.priority_level || "",
-        subscription_id: t.subscription_id || "",
+        subscription_id: t.subscription.subscription_id || "",
       }));
 
       setTickets(mappedTickets);
     } catch (error: any) {
-      // console.error("Fetch tickets error:", error.message);
+      setTickets([]);
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -116,7 +123,7 @@ const Ticket: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    
+
     fetchTickets();
   }, []);
 
@@ -129,14 +136,26 @@ const Ticket: React.FC = () => {
     });
   };
 
-  const getTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
+
+  useEffect(() => {
+    if (params.status) {
+      const statusParam = params.status as string;
+
+      const filterMap: Record<string, typeof filter> = {
+        'open': 'open',
+        'pending': 'pending',
+        'accepted': 'accepted',
+        'inProgress': 'inProgress',
+        'completed': 'completed',
+        'closed': 'closed'
+      };
+
+      if (filterMap[statusParam]) {
+        setFilter(filterMap[statusParam]);
+      }
+    }
+  }, [params.status]);
+
 
   const getStatusConfig = (status: TicketItem["status"]) => {
     switch (status) {
@@ -213,7 +232,9 @@ const Ticket: React.FC = () => {
         case "inProgress":
           return ticket.status === "InProgress";
         case "completed":
-          return ticket.status === "Completed" || ticket.status === "Closed";
+          return ticket.status === "Completed"
+        case "closed":
+          return ticket.status === "Closed";
         default:
           return true;
       }
@@ -243,7 +264,7 @@ const Ticket: React.FC = () => {
           </View>
 
           {/* Quick Filter Tabs */}
-          <ScrollView
+          <ScrollView 
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.filterContainer}
@@ -275,7 +296,14 @@ const Ticket: React.FC = () => {
                 key: "completed",
                 label: "Completed",
                 count: tickets.filter(
-                  (t) => t.status === "Completed" || t.status === "Closed"
+                  (t) => t.status === "Completed"
+                ).length,
+              },
+              {
+                key: "closed",
+                label: "Closed",
+                count: tickets.filter(
+                  (t) => t.status === "Closed"
                 ).length,
               },
             ].map((tab) => (
@@ -480,18 +508,18 @@ const Ticket: React.FC = () => {
                       {/* Compact Content */}
                       <View style={styles.contentRow}>
                         <View style={styles.textContainer}>
-                          
+
                           <View style={styles.clientRow}>
                             <Ionicons
                               name="person-outline"
                               size={15}
                               color="#6B7280"
                             />
-                            <Text style={styles.clientName} numberOfLines={1}>
-                              {ticket.clientName} - {ticket.subscription_id}
+                            <Text style={styles.clientName} numberOfLines={2}>
+                              {ticket.clientName?.toUpperCase()} - {ticket.subscription_id}
                             </Text>
                           </View>
-                          <Text style={styles.subjectText} numberOfLines={2}>
+                          <Text style={styles.subjectText} numberOfLines={1}>
                             {ticket.subject?.toUpperCase()}
                           </Text>
                         </View>
@@ -537,7 +565,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#00AF9F",
-    paddingTop: 35,
+    paddingTop: Platform.OS === "ios" ? 35 : 35,
   },
   container: {
     flex: 1,
@@ -851,7 +879,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   clientName: {
-    fontSize: 15,
+    fontSize: 13,
     color: "#000000ff",
     fontWeight: "800",
     flex: 1,

@@ -2,20 +2,19 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
 import { getToken } from "../../scripts/token";
-import { getUser } from "../../scripts/user";
 
 const { width } = Dimensions.get("window");
 
@@ -34,20 +33,26 @@ export default function TeamScreen() {
     setTimeout(() => setRefreshing(false), 1000);
   }, []);
 
+  type Member = {
+    name: string;
+    branch: string;
+  };
+
   type TeamInfo = {
     teamName: string;
     shift: string;
     date: string;
     status: string;
     id: number;
-    members: string[];
+    members: Member[];
   };
 
   const fetchTeam = async () => {
     try {
       setLoading(true);
+
       const token = getToken();
-      const user = getUser();
+
       const response = await fetch(
         "https://tub.kazibufastnet.com/api/tech/team",
         {
@@ -58,23 +63,35 @@ export default function TeamScreen() {
           },
         }
       );
+
       const data = await response.json();
 
-      if (!data.team || data.team_id != null) {
+      if (!data.team) {
         setTeam(null);
         return;
       }
 
       const teamInfo: TeamInfo = {
-        teamName: data.team?.name,
-        shift: data.team?.shift,
-        date: data.team?.date,
-        status: data.team?.status,
-        id: data.team?.id,
-        members: Array.isArray(data.team?.members)
-          ? data.team.members
-          : data.team?.members?.split(",").map((m: string) => m.trim()) || [],
+        teamName: data.team.name ?? "",
+        shift: data.team.shift ?? "",
+        date: data.team.date ?? "",
+        status: data.team.status ?? "",
+        id: data.team.id ?? 0,
+        members: Array.isArray(data.members)
+          ? data.members.map((m: any) => ({
+              name: m.name,
+              branch: m.branch.name,
+            }))
+          : data.team.members
+          ? [
+              {
+                name: data.members.name,
+                branch: data.members.branch.name,
+              },
+            ]
+          : [],
       };
+
       setWorks(
         Array.isArray(data.works)
           ? data.works.filter((w: string) => w.trim() !== "")
@@ -82,7 +99,8 @@ export default function TeamScreen() {
       );
 
       setTeam(teamInfo);
-    } catch (error: any) {
+    } catch (error) {
+      
       setTeam(null);
     } finally {
       setLoading(false);
@@ -119,7 +137,7 @@ export default function TeamScreen() {
         Alert.alert("Error", "Failed to submit comment");
       }
     } catch (error) {
-      Alert.alert("Error", "Network error. Please try again.");
+      Alert.alert("Error", "Failed to submit comment");
     }
   };
 
@@ -168,9 +186,17 @@ export default function TeamScreen() {
       };
     });
 
+    const getInitials = (name: string) =>
+  name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
-      <Header/>
+      <Header />
 
       {/* ⏳ LOADING */}
       {loading && (
@@ -238,7 +264,9 @@ export default function TeamScreen() {
                   size={24}
                   color="#00AF9F"
                 />
-                <Text style={styles.teamName}>{team.teamName?.toUpperCase()}</Text>
+                <Text style={styles.teamName}>
+                  {team.teamName?.toUpperCase()}
+                </Text>
               </View>
             </View>
           </View>
@@ -295,7 +323,7 @@ export default function TeamScreen() {
                 size={20}
                 color="#00AF9F"
               />
-              <Text style={styles.cardTitle}>Team Members</Text>
+              <Text style={styles.cardTitle}>TEAM MEMBERS</Text>
               <View style={styles.memberCountBadge}>
                 <Text style={styles.memberCountText}>
                   {team.members?.length || 0}
@@ -307,18 +335,25 @@ export default function TeamScreen() {
               <View style={styles.membersList}>
                 {team.members.map((member, index) => (
                   <View key={index} style={styles.memberItem}>
+                    {/* Avatar */}
                     <View style={styles.memberAvatar}>
                       <Text style={styles.memberAvatarText}>
-                        {member.charAt(0).toUpperCase()}
+                        {getInitials(member.name)}
                       </Text>
                     </View>
+
+                    {/* Info */}
                     <View style={styles.memberInfo}>
                       <Text style={styles.memberName} numberOfLines={1}>
-                        {member}
+                        {member.name?.toUpperCase()}
                       </Text>
-                      <Text style={styles.memberRole}>Technicias</Text>
+                      <Text style={styles.memberRole}>{member.branch?.toUpperCase()}</Text>
                     </View>
-                    <View style={styles.memberIndex}></View>
+
+                    {/* Index */}
+                    <View style={styles.memberIndex}>
+                      <Text style={styles.memberIndexText}>{index + 1}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -342,7 +377,7 @@ export default function TeamScreen() {
                 size={20}
                 color="#00AF9F"
               />
-              <Text style={styles.cardTitle}>Team Comments</Text>
+              <Text style={styles.cardTitle}>Team comments</Text>
             </View>
 
             <View style={styles.commentContainer}>
@@ -447,7 +482,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: "#FFFFFF"
+    backgroundColor: "#FFFFFF",
   },
   emptyScrollContent: {
     flexGrow: 1,

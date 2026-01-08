@@ -97,7 +97,7 @@ const handleUpdate = async (
 
       // Make sure new and confirm match
       if (newPassword !== confirmPassword) {
-        Alert.alert("Error", "New password and confirmation do not match");
+        Alert.alert("Error", "New password does not match");
         return;
       }
 
@@ -136,13 +136,13 @@ const handleUpdate = async (
       ) {
         Alert.alert("Error", "Current password is incorrect");
       } else {
-        Alert.alert("Error", errors);
+        Alert.alert("Error", 'Something went wrong!');
       }
 
-      // console.error("Update failed:", responseData);
+   
     }
   } catch (error) {
-    console.error("Update request failed:", error);
+
     Alert.alert("Error", "Failed to update profile. Please try again.");
   }
 };

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "KazibuFastTech",
+    "name": "KZBU TECHNICIAN",
     "owner": "joshuasalabe",
     "slug": "kazibu",
     "version": "1.0.0",
@@ -73,18 +73,6 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/kazi.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
       "react-native-vision-camera",
       "expo-web-browser"
     ],

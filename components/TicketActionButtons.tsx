@@ -28,7 +28,7 @@ import TicketButton from "./TicketButton";
 
 /* ---------------- TYPES ---------------- */
 
-type TicketStatus = "pending" | "accepted" | "in progress" | "completed";
+type TicketStatus = "pending" | "accepted" | "in progress" | "completed" | "closed";
 type TicketButtonProps = {
   label: string;
   onPress: () => void;
@@ -48,6 +48,7 @@ interface TicketItem {
   subject: string;
   pictureCause: string;
   pictureReading: string;
+  branch: string;
 }
 
 /* ---------------- COMPONENT ---------------- */
@@ -73,6 +74,7 @@ const TicketActionButtons: React.FC = () => {
   const [installationDate, setInstallationDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
   
   // Modal states
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
@@ -104,6 +106,10 @@ const TicketActionButtons: React.FC = () => {
           ? "accepted"
           : t.status === "in progress"
           ? "in progress"
+          : t.status === "completed"
+          ? "completed"
+          : t.status === "closed"
+          ? "closed"
           : "pending";
 
       setTicket({
@@ -119,7 +125,10 @@ const TicketActionButtons: React.FC = () => {
         subject: t.subject,
         pictureCause: t.picture,
         pictureReading: t.picture_reading,
+        branch: t.branch?.subdomain || 'tub',
       });
+  
+      
 
       setStatus(normalizedStatus);
 
@@ -130,8 +139,15 @@ const TicketActionButtons: React.FC = () => {
         setPictureCause(t.picture || null);
         setPictureReading(t.picture_reading || null);
       }
+      
+      // Check if the ticket is already closed
+      if (t.status === "closed") {
+        setIsClosed(true);
+        setRemarks(t.remarks || "No remarks provided");
+        setPictureCause(t.picture || null);
+        setPictureReading(t.picture_reading || null);
+      }
     } catch (error) {
-      console.error(error);
       Alert.alert("Error", "Unable to load ticket");
     }
   };
@@ -203,11 +219,12 @@ const TicketActionButtons: React.FC = () => {
     }
     
     // Construct full URL for images from backend
-    const fullImageUrl = imageUrl.startsWith('http') 
-      ? imageUrl 
-      : `https://tub.kazibufastnet.com/storage/${imageUrl}`;
+    const imageUri = ticket
+  ? `https://${ticket.branch}.kazibufastnet.com/storage/${imageUrl}`
+  : "";
+
     
-    setModalImageUrl(fullImageUrl);
+    setModalImageUrl(imageUri);
     setModalImageTitle(title);
     setIsImageModalVisible(true);
   };
@@ -351,7 +368,6 @@ const TicketActionButtons: React.FC = () => {
         Alert.alert("Error", "Please fill out all fields.");
       }
     } catch (error) {
-      console.error("POST ERROR:", error);
       Alert.alert("Error", "An error occurred while submitting the ticket.");
     }
   };
@@ -425,8 +441,8 @@ const TicketActionButtons: React.FC = () => {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{modalImageTitle}</Text>
-              <TouchableOpacity onPress={closeImageModal} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#374151" />
+              <TouchableOpacity onPress={closeImageModal}>
+                <Ionicons name="close" size={30} color="#ffffffff" />
               </TouchableOpacity>
             </View>
             
@@ -437,13 +453,12 @@ const TicketActionButtons: React.FC = () => {
                 resizeMode="contain"
               />
             </View>
-            
-            
           </View>
         </View>
       </Modal>
 
-      {status === "pending" && !isCompleted && (
+      {/* Show action buttons only if ticket is NOT completed and NOT closed */}
+      {!isCompleted && !isClosed && status === "pending" && (
         <View style={styles.pendingContainer}>
           <Text style={styles.sectionTitle}>Ticket Actions</Text>
           <View style={styles.buttonRow}>
@@ -465,7 +480,8 @@ const TicketActionButtons: React.FC = () => {
         </View>
       )}
 
-      {status === "accepted" && !isCompleted && (
+      {/* Show action buttons only if ticket is NOT completed and NOT closed */}
+      {!isCompleted && !isClosed && status === "accepted" && (
         <View style={styles.acceptedContainer}>
           <Text style={styles.sectionTitle}>Schedule Actions</Text>
           <View style={styles.buttonRow}>
@@ -482,7 +498,8 @@ const TicketActionButtons: React.FC = () => {
         </View>
       )}
 
-      {status === "in progress" && !isCompleted && (
+      {/* Show completion form only if ticket is NOT completed and NOT closed */}
+      {!isCompleted && !isClosed && status === "in progress" && (
         <View style={styles.completionContainer}>
           <Text style={styles.completionTitle}>Complete Ticket</Text>
           <Text style={styles.completionSubtitle}>
@@ -782,7 +799,7 @@ const TicketActionButtons: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: `https://tub.kazibufastnet.com/storage/${ticket.pictureCause}`,
+                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureCause}`,
                   }}
                   style={styles.imagePreview}
                 />
@@ -802,7 +819,41 @@ const TicketActionButtons: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: `https://tub.kazibufastnet.com/storage/${ticket.pictureReading}`,
+                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureReading}`,
+                  }}
+                  style={styles.imagePreview}
+                />
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.noImageText}>No photo attached</Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* When ticket is closed */}
+      {isClosed && (
+        <View style={styles.closedContainer}>
+          <Text style={styles.sectionTitle}>Ticket Closed</Text>
+
+          <View style={styles.completionDetails}>
+            <Text style={styles.inputLabel}>Remarks</Text>
+            <Text style={styles.remarksText}>
+              {remarks || "No remarks added"}
+            </Text>
+          </View>
+          
+          {/* Cause Picture */}
+          <View style={styles.formSection}>
+            <Text style={styles.inputLabel}>{ImageMessage(ticket)}</Text>
+            {ticket?.pictureCause ? (
+              <TouchableOpacity 
+                onPress={() => openImageModal(ticket.pictureCause, ImageMessage(ticket))}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={{
+                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureCause}`,
                   }}
                   style={styles.imagePreview}
                 />
@@ -812,21 +863,25 @@ const TicketActionButtons: React.FC = () => {
             )}
           </View>
 
-          {!isCompleted && (
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={() =>
-                  Alert.alert(
-                    "Completed",
-                    "This ticket is already marked as completed."
-                  )
-                }
+          {/* Reading Picture */}
+          <View style={styles.formSection}>
+            <Text style={styles.inputLabel}>Photo of Reading</Text>
+            {ticket?.pictureReading ? (
+              <TouchableOpacity 
+                onPress={() => openImageModal(ticket.pictureReading, "Photo of Reading")}
+                activeOpacity={0.8}
               >
-                <Text style={styles.submitButtonText}>Ticket Completed</Text>
+                <Image
+                  source={{
+                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureReading}`,
+                  }}
+                  style={styles.imagePreview}
+                />
               </TouchableOpacity>
-            </View>
-          )}
+            ) : (
+              <Text style={styles.noImageText}>No photo attached</Text>
+            )}
+          </View>
         </View>
       )}
     </View>
@@ -956,6 +1011,14 @@ const styles = StyleSheet.create({
   submitButtonDisabled: { backgroundColor: "#9CA3AF", opacity: 0.7 },
   submitButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
   completedContainer: {
+    backgroundColor: "#F7FAFC",
+    borderRadius: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginTop: 16,
+  },
+  closedContainer: {
     backgroundColor: "#F7FAFC",
     borderRadius: 10,
     padding: 16,

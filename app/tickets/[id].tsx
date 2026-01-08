@@ -3,20 +3,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Linking,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator, Alert, Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import TicketActionButtons from "../../components/TicketActionButtons";
@@ -36,6 +35,7 @@ interface TicketItem {
   longitude: string;
 }
 
+
 export default function TicketDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -44,6 +44,7 @@ export default function TicketDetails() {
 
   const [ticket, setTicket] = useState<TicketItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();
@@ -82,7 +83,7 @@ export default function TicketDetails() {
       setTicket({
         id: t.id?.toString() ?? "",
         ticketNumber: t.ticket_number?.toString() ?? "N/A",
-        accountNumber: t.subscription_id?.toString() ?? "N/A",
+        accountNumber: t.subscription.subscription_id?.toString() ?? "N/A",
         accountName: t.client?.name ?? "Unknown",
         installationAddress: t.subscription.installation_address ?? "N/A",
         mobileNumber: t.client?.mobile_number ?? "N/A",
@@ -100,7 +101,20 @@ export default function TicketDetails() {
         longitude: t.subscription?.longitude,
       });
     } catch (error: any) {
-      console.error("Fetch ticket error:", error.message);
+      Alert.alert(
+  "Notice",
+  "Something went wrong!",
+  [
+    {
+      text: "OK",
+      onPress: () => {
+        // This runs only after user clicks OK
+        router.push("/(tech-tabs)/tickets");
+      },
+    },
+  ],
+  { cancelable: false }
+);
     } finally {
       setRefreshing(false);
     }
@@ -182,7 +196,7 @@ export default function TicketDetails() {
             <View style={styles.row}>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>ACCOUNT NAME</Text>
-                <Text style={styles.cardValue}>{ticket.accountName}</Text>
+                <Text style={styles.cardValue}>{ticket.accountName?.toUpperCase()}</Text>
               </View>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>MOBILE NUMBER</Text>
@@ -212,12 +226,12 @@ export default function TicketDetails() {
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>DATE</Text>
                 <Text style={styles.cardValue}>
-                  {formatDateTime(ticket.date)}
+                  {formatDateTime(ticket.date?.toUpperCase())}
                 </Text>
               </View>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>TYPE</Text>
-                <Text style={styles.cardValue}>{ticket.type}</Text>
+                <Text style={styles.cardValue}>{ticket.type?.toUpperCase()}</Text>
               </View>
             </View>
           </View>
@@ -227,7 +241,7 @@ export default function TicketDetails() {
             <View style={styles.fullCard}>
               <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
               <Text style={styles.fullCardValue}>
-                {ticket.installationAddress}
+                {ticket.installationAddress?.toUpperCase()}
               </Text>
             </View>
           </View>
@@ -236,13 +250,14 @@ export default function TicketDetails() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Subject Details</Text>
             <View style={styles.fullCard}>
-              <Text style={styles.subjectText}>{ticket.subject}</Text>
+              <Text style={styles.subjectText}>{ticket.subject?.toUpperCase()}</Text>
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location on Map</Text>
             <WebView
+             key={`${refreshing}`}
               source={{
                 uri:
                   "https://tub.kazibufastnet.com/client/map/" +
@@ -266,7 +281,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#00AF9F",
-    paddingTop: 30,
+    paddingTop: 35,
   },
   container: {
     flex: 1,

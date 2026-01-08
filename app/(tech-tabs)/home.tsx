@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -48,12 +49,12 @@ const Home: React.FC = () => {
     id: string;
     clientName: string;
     status:
-    | "Open"
-    | "Pending"
-    | "InProgress"
-    | "Accepted"
-    | "Completed"
-    | "Closed";
+      | "Open"
+      | "Pending"
+      | "InProgress"
+      | "Accepted"
+      | "Completed"
+      | "Closed";
     type: "Repair" | "Installation" | null;
     subject: string;
     date: string;
@@ -63,13 +64,13 @@ const Home: React.FC = () => {
     priority_level?: string;
   };
 
-  interface WeatherData {
+ interface WeatherData {
     name: string;
     main: {
       temp: number;
       humidity: number;
     };
-    weather: { main: string, description: string }[];
+    weather: { main: string, icon: string, description: string }[];
   }
 
   const router = useRouter();
@@ -82,11 +83,9 @@ const Home: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
 
-
-  const [city, setCity] = useState<string>('');
+  const [city, setCity] = useState<string>("");
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
-
 
   // tickets
   const [openTickets, setOpenTickets] = useState(0);
@@ -103,6 +102,11 @@ const Home: React.FC = () => {
     completed: completedTickets,
     closed: closedTickets,
   };
+
+  const [coords, setCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -155,6 +159,7 @@ const Home: React.FC = () => {
 
     try {
       const token = getToken();
+
       const response = await fetch(
         "https://tub.kazibufastnet.com/api/tech/home",
         {
@@ -196,11 +201,7 @@ const Home: React.FC = () => {
 
       // Stats
       setOpenTickets(
-        apiTickets.filter(
-          (t) =>
-            t.status?.toLowerCase() === "open" ||
-            t.status?.toLowerCase() === "in progress"
-        ).length
+        apiTickets.filter((t) => t.status?.toLowerCase() === "open").length
       );
       setPendingTickets(
         apiTickets.filter((t) => t.status?.toLowerCase() === "pending").length
@@ -212,7 +213,11 @@ const Home: React.FC = () => {
         apiTickets.filter((t) => t.status?.toLowerCase() === "closed").length
       );
     } catch (err: any) {
-      setError(err.message || "Failed to fetch tickets");
+      setOpenTickets(0);
+      setPendingTickets(0);
+      setCompletedTickets(0);
+      setClosedTickets(0);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -220,7 +225,7 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     fetchTickets();
-    fetchWeather();
+    getUserLocation();
 
     const interval = setInterval(() => {
       const now = new Date();
@@ -285,85 +290,79 @@ const Home: React.FC = () => {
     opacity: greeting,
   };
 
-  const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case "clear":
-         return <Image
-          source={require("../../assets/images/clear-sky.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-      case "clouds":
-        return <Image
-          source={require("../../assets/images/cloudy.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-      case "rain":
-        return <Image
-          source={require("../../assets/images/rainy-day.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-      case "thunderstorm":
-        return <Image
-          source={require("../../assets/images/thunder.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
+  const getWeatherIcon = (iconCode: string) => {
+    const iconUrl = `https://openweathermap.org/img/wn/${iconCode}.png`;
+    
 
-      default:
-        return <Image
-          source={require("../../assets/images/cloudy.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
+    return (
+      <Image
+        source={{ uri: iconUrl }}
+        style={styles.icon}
+        resizeMode="contain"
+      />
+    );
+  };
+
+  const getUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setError("Location permission denied");
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setCoords({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    } catch (err) {
+      setError("Unable to get location");
     }
   };
 
+  const fetchWeather = async (lat: number, lon: number) => {
+    if (
+      typeof lat !== "number" ||
+      typeof lon !== "number" ||
+      isNaN(lat) ||
+      isNaN(lon)
+    ) {
+      console.log("Invalid coordinates:", lat, lon);
+      return;
+    }
 
-
-  const fetchWeather = async () => {
     setWeatherLoading(true);
-    setWeather(null);
 
     try {
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=Tubigon&appid=20c5be33c71294fe1a5100a7ae1ff885`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=20c5be33c71294fe1a5100a7ae1ff885`;
+
+      const response = await fetch(url);
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error("Failed to fetch weather");
+        const text = await response.text();
+        console.error("Weather API error:", text);
+        throw new Error("Weather fetch failed");
       }
-
-      // Check if the weather condition is being fetched correctly
-
-
-      const data = await response.json(); // ✅ IMPORTANT
-
-      // Check if data is available and has weather information
-      if (data.weather && data.weather.length > 0) {
-        setWeather(data);
-        console.log(weather?.weather[0].main);
-      } else {
-        throw new Error("Invalid weather data");
-      }
+      setWeather(data);
     } catch (err) {
-      setError("Error fetching weather data.");
+      console.error(err);
+      setError("Error fetching weather data");
     } finally {
       setWeatherLoading(false);
     }
   };
 
-
-
-
+  useEffect(() => {
+    if (
+      coords &&
+      typeof coords.latitude === "number" &&
+      typeof coords.longitude === "number"
+    ) {
+      fetchWeather(coords.latitude, coords.longitude);
+    }
+  }, [coords]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
@@ -388,21 +387,28 @@ const Home: React.FC = () => {
           <View style={styles.welcomeHeader}>
             <View>
               <View style={styles.greetingRow}>
-                <Text style={styles.greeting}>{getGreeting()}</Text>
+                <Text style={styles.greeting}>{getGreeting()},</Text>
               </View>
-              <Text style={styles.name}>{firstName?.toUpperCase()}!</Text>
+              <Text style={styles.name}>{firstName?.toUpperCase()}</Text>
               <Text style={styles.dateText}>{currentDate}</Text>
             </View>
 
             {weather && !weatherLoading ? (
-              <View style={{ flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <View
+                style={{
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>
                   {/* Convert temperature from Kelvin to Celsius */}
-                  {(weather.main.temp - 273.15).toFixed(1)}°C · {weather.weather[0].main}
+                  {Math.round (weather.main.temp )}°C ·{" "}
+                  {weather.weather[0].description}
                 </Text>
 
                 {/* Render the image dynamically */}
-                {getWeatherIcon(weather.weather[0].main)}
+                {getWeatherIcon(weather.weather[0].icon)}
               </View>
             ) : (
               <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
@@ -430,7 +436,10 @@ const Home: React.FC = () => {
               activeOpacity={0.85}
             >
               <View
-                style={[styles.statIconContainer, { backgroundColor: "#DBEAFE" }]}
+                style={[
+                  styles.statIconContainer,
+                  { backgroundColor: "#DBEAFE" },
+                ]}
               >
                 <MaterialCommunityIcons
                   name="ticket-confirmation"
@@ -440,7 +449,9 @@ const Home: React.FC = () => {
               </View>
               <Text style={styles.statNumber}>{stats.activeTickets}</Text>
               <Text style={styles.statLabel}>Open Tickets</Text>
-              <View style={[styles.statIndicator, { backgroundColor: "#3B82F6" }]} />
+              <View
+                style={[styles.statIndicator, { backgroundColor: "#3B82F6" }]}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -449,7 +460,10 @@ const Home: React.FC = () => {
               activeOpacity={0.85}
             >
               <View
-                style={[styles.statIconContainer, { backgroundColor: "#FEF3C7" }]}
+                style={[
+                  styles.statIconContainer,
+                  { backgroundColor: "#FEF3C7" },
+                ]}
               >
                 <MaterialCommunityIcons
                   name="clock-alert"
@@ -459,7 +473,9 @@ const Home: React.FC = () => {
               </View>
               <Text style={styles.statNumber}>{stats.pending}</Text>
               <Text style={styles.statLabel}>Pending Tickets</Text>
-              <View style={[styles.statIndicator, { backgroundColor: "#F59E0B" }]} />
+              <View
+                style={[styles.statIndicator, { backgroundColor: "#F59E0B" }]}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -468,7 +484,10 @@ const Home: React.FC = () => {
               activeOpacity={0.85}
             >
               <View
-                style={[styles.statIconContainer, { backgroundColor: "#D1FAE5" }]}
+                style={[
+                  styles.statIconContainer,
+                  { backgroundColor: "#D1FAE5" },
+                ]}
               >
                 <MaterialCommunityIcons
                   name="check-circle"
@@ -478,7 +497,9 @@ const Home: React.FC = () => {
               </View>
               <Text style={styles.statNumber}>{stats.completed}</Text>
               <Text style={styles.statLabel}>Completed Tickets</Text>
-              <View style={[styles.statIndicator, { backgroundColor: "#10B981" }]} />
+              <View
+                style={[styles.statIndicator, { backgroundColor: "#10B981" }]}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -487,7 +508,10 @@ const Home: React.FC = () => {
               activeOpacity={0.85}
             >
               <View
-                style={[styles.statIconContainer, { backgroundColor: "#F3F4F6" }]}
+                style={[
+                  styles.statIconContainer,
+                  { backgroundColor: "#F3F4F6" },
+                ]}
               >
                 <MaterialCommunityIcons
                   name="archive-check"
@@ -497,7 +521,9 @@ const Home: React.FC = () => {
               </View>
               <Text style={styles.statNumber}>{stats.closed}</Text>
               <Text style={styles.statLabel}>Closed Tickets</Text>
-              <View style={[styles.statIndicator, { backgroundColor: "#6B7280" }]} />
+              <View
+                style={[styles.statIndicator, { backgroundColor: "#6B7280" }]}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -551,13 +577,12 @@ const Home: React.FC = () => {
                   style={[
                     styles.ticketCard,
                     index === assignedTickets.slice(0, 3).length - 1 &&
-                    styles.lastCard,
+                      styles.lastCard,
                   ]}
                   onPress={() => router.push(`/tickets/${ticket.id}`)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.ticketHeader}>
-
                     <View style={styles.ticketInfo}>
                       <Text style={styles.ticketSubject} numberOfLines={2}>
                         {ticket.subject}
@@ -574,7 +599,6 @@ const Home: React.FC = () => {
                           </Text>
                         </View>
 
-
                         <View style={styles.separator} />
                         <Text style={styles.ticketDate}>
                           {formatDate(ticket.date)}
@@ -586,9 +610,8 @@ const Home: React.FC = () => {
                         style={[
                           styles.priorityBadge,
                           {
-                            backgroundColor: getPriorityColor(
-                              ticket.priority_level
-                            ) + "20",
+                            backgroundColor:
+                              getPriorityColor(ticket.priority_level) + "20",
                           },
                         ]}
                       >
@@ -688,8 +711,8 @@ const Home: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingTop: Platform.OS === "ios" ? 35 : 30,
+    backgroundColor: "#00AF9F",
+    paddingTop: Platform.OS === "ios" ? 35 : 35,
   },
   scrollView: {
     flex: 1,
@@ -880,11 +903,10 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: 'space-between',
-    width: '100%',
+    justifyContent: "space-between",
+    width: "100%",
     gap: scaleSize(10),
     marginBottom: scaleSize(6),
-
   },
   sectionTitle: {
     fontSize: scaleSize(18),
@@ -899,7 +921,7 @@ const styles = StyleSheet.create({
     borderRadius: scaleSize(12),
     minWidth: scaleSize(24),
     alignItems: "center",
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   ticketCountText: {
     fontSize: scaleSize(12),
@@ -1051,10 +1073,19 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    width: 70,
-    height: 70,
-    marginTop: 4,
+    width: scaleSize(80), 
+    height: scaleSize(80),
+    backgroundColor: "#FFFFFFCC", 
+    borderRadius: scaleSize(16),
+    padding: scaleSize(10), 
+    margin: 0,
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, 
+    shadowRadius: scaleSize(4), 
+    
   },
+
 
   // Loading State
   loadingState: {
@@ -1146,7 +1177,6 @@ const styles = StyleSheet.create({
     fontSize: scaleSize(15),
     fontWeight: "600",
   },
-
 
   // Error State
   errorContainer: {

@@ -1,23 +1,23 @@
 import { getToken } from '@/scripts/token';
 import { getUser } from '@/scripts/user';
 import { Fontisto, Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { CameraCapturedPicture, CameraType, CameraView } from 'expo-camera';
+import { Camera, CameraCapturedPicture, CameraType, CameraView } from 'expo-camera';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -45,6 +45,8 @@ export default function TimeInScreen() {
   const [showCamera, setShowCamera] = useState<boolean>(false);
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permissionMessage, setPermissionMessage] = useState('');
 
   const cameraRef = useRef<CameraView | null>(null);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,7 +54,7 @@ export default function TimeInScreen() {
 
   const [pulseAnim] = useState(new Animated.Value(1));
 
-  // Pulse animation for time in button
+  // Pulse animation for Time out button
   useEffect(() => {
     if (photo) {
       Animated.loop(
@@ -111,6 +113,15 @@ export default function TimeInScreen() {
         if (addr.city || addr.town || addr.village) text += `${addr.city || addr.town || addr.village}, `;
         if (addr.state) text += `${addr.state}`;
         setLocationText(text || 'Location not found.');
+
+        const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+        if (cameraStatus !== 'granted') {
+          setPermissionMessage('Camera permission denied.');
+          setHasPermission(false);
+        } else {
+          setPermissionMessage('Camera permission granted.');
+          setHasPermission(true);
+        }
       } catch (error) {
         setLocationText('Unable to retrieve location.');
       } finally {
@@ -140,16 +151,16 @@ export default function TimeInScreen() {
       Alert.alert('Error', 'Missing location or picture.');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const token = await getToken();
-      const res = await fetch(`https://tub.kazibufastnet.com/api/tech/time_out/${technician?.id}`, {
+      const res = await fetch(`https://tub.kazibufastnet.com/api/tech/time_out`, {
         method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token}`, 
-          Accept: 'application/json', 
-          'Content-Type': 'application/json' 
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           location: locationCoords,
@@ -157,18 +168,17 @@ export default function TimeInScreen() {
           picture: photo.base64,
         }),
       });
-      
+
       if (res.ok) {
-        Alert.alert('Success', 'Time out recorded successfully!', [
-          { text: 'OK', onPress: () => router.push('/(auth)/login') }
-        ]);
+        Alert.alert('Success', 'Time Out recorded successfully!');
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
       } else {
         const err = await res.json();
-        console.error(err);
         Alert.alert('Error', 'Failed to submit Time Out. Please try again.');
       }
     } catch (error) {
-      console.error(error);
       Alert.alert('Error', 'Network error. Please check your connection.');
     } finally {
       setIsSubmitting(false);
@@ -187,8 +197,8 @@ export default function TimeInScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#0C1824" barStyle="light-content" />
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer} 
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
@@ -200,8 +210,8 @@ export default function TimeInScreen() {
             <Ionicons name="person-circle" size={scaleSize(50)} color="#00AFA1" />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{technician?.name || 'Technician Name'}</Text>
-            <Text style={styles.profileRole}>{technician?.user_type || 'Technician'}</Text>
+            <Text style={styles.profileName}>{technician?.name?.toUpperCase() || 'Technician Name'}</Text>
+            <Text style={styles.profileRole}>{technician?.user_type?.toUpperCase() || 'Technician'}</Text>
           </View>
         </View>
 
@@ -213,7 +223,7 @@ export default function TimeInScreen() {
           </View>
           <View style={styles.timeContent}>
             <Text style={styles.timeText}>{currentTime}</Text>
-            <Text style={styles.dateText}>{currentDate}</Text>
+            <Text style={styles.dateText}>{currentDate?.toUpperCase()}</Text>
           </View>
         </View>
 
@@ -223,7 +233,7 @@ export default function TimeInScreen() {
             <Ionicons name="location-sharp" size={24} color="#00AFA1" />
             <Text style={styles.locationHeaderText}>Current Location</Text>
           </View>
-          <Text style={styles.locationText}>{locationText}</Text>
+          <Text style={styles.locationText}>{locationText?.toUpperCase()}</Text>
           {locationCoords && (
             <Text style={styles.coordinatesText}>
               {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
@@ -239,24 +249,24 @@ export default function TimeInScreen() {
               <Text style={styles.cameraSubtitle}>Make sure your face is visible</Text>
             </View>
             <View style={styles.cameraWrapper}>
-              <CameraView 
-                ref={cameraRef} 
-                style={styles.camera} 
-                facing={facing} 
+              <CameraView
+                ref={cameraRef}
+                style={styles.camera}
+                facing={facing}
                 ratio="16:9"
               >
                 <View style={styles.cameraOverlay}>
                   <View style={styles.faceGuide} />
                 </View>
                 <View style={styles.cameraControls}>
-                  <TouchableOpacity 
-                    onPress={toggleCameraFacing} 
+                  <TouchableOpacity
+                    onPress={toggleCameraFacing}
                     style={styles.cameraControlButton}
                   >
                     <Ionicons name="camera-reverse" size={28} color="#fff" />
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={handleTakePhoto} 
+                  <TouchableOpacity
+                    onPress={handleTakePhoto}
                     style={styles.captureButton}
                   >
                     <View style={styles.captureButtonInner} />
@@ -265,7 +275,7 @@ export default function TimeInScreen() {
                 </View>
               </CameraView>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowCamera(false)}
               style={styles.cancelButton}
             >
@@ -278,19 +288,19 @@ export default function TimeInScreen() {
               <Text style={styles.photoTitle}>Photo Preview</Text>
               <Text style={styles.photoSubtitle}>Check if the photo is clear</Text>
             </View>
-            <Image 
-              source={{ uri: 'data:image/jpg;base64,' + photo.base64 }} 
-              style={styles.photoPreview} 
+            <Image
+              source={{ uri: 'data:image/jpg;base64,' + photo.base64 }}
+              style={styles.photoPreview}
             />
             <View style={styles.photoActions}>
-              <TouchableOpacity 
-                onPress={handleRetakePhoto} 
+              <TouchableOpacity
+                onPress={handleRetakePhoto}
                 style={[styles.actionButton, styles.retakeButton]}
               >
                 <Fontisto name="trash" size={18} color="#fff" />
                 <Text style={styles.actionButtonText}>Retake</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleTimeIn}
                 disabled={isSubmitting}
                 style={[styles.actionButton, styles.submitButton]}
@@ -300,7 +310,7 @@ export default function TimeInScreen() {
                 ) : (
                   <>
                     <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                    <Text style={styles.actionButtonText}>Submit Time Out</Text>
+                    <Text style={styles.actionButtonText}>Time Out</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -313,10 +323,10 @@ export default function TimeInScreen() {
               <Text style={styles.photoPromptTitle}>Attendance Photo Required</Text>
             </View>
             <Text style={styles.photoPromptText}>
-              Take a clear photo of yourself for attendance verification. Make sure your face is visible and well-lit.
+              Take a clear photo of yourself for attendance verification. Make sure your face is visible.
             </Text>
-            <TouchableOpacity 
-              onPress={() => setShowCamera(true)} 
+            <TouchableOpacity
+              onPress={() => setShowCamera(true)}
               style={styles.takePhotoButton}
             >
               <Ionicons name="camera" size={24} color="#fff" />
@@ -325,52 +335,35 @@ export default function TimeInScreen() {
           </View>
         )}
 
-        {/* Instructions */}
-        {!showCamera && !photo && (
-          <View style={styles.instructions}>
-            <Text style={styles.instructionsTitle}>Instructions:</Text>
-            <View style={styles.instructionItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#00AFA1" />
-              <Text style={styles.instructionText}>Ensure location services are enabled</Text>
-            </View>
-            <View style={styles.instructionItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#00AFA1" />
-              <Text style={styles.instructionText}>Take a clear photo of yourself</Text>
-            </View>
-            <View style={styles.instructionItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#00AFA1" />
-              <Text style={styles.instructionText}>Submit when ready to clock in</Text>
-            </View>
-          </View>
-        )}
+       
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { 
-    flex: 1, 
+  safeArea: {
+    flex: 1,
     backgroundColor: '#0C1824',
   },
-  scrollContainer: { 
+  scrollContainer: {
     paddingHorizontal: scaleSize(20),
     paddingBottom: 40,
     paddingTop: 45
   },
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: '#0C1824' 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0C1824'
   },
-  loadingText: { 
-    color: '#fff', 
-    marginTop: 20, 
+  loadingText: {
+    color: '#fff',
+    marginTop: 20,
     fontSize: scaleSize(16),
     opacity: 0.8,
   },
-  
+
   // Header
   header: {
     flexDirection: 'row',
@@ -392,7 +385,7 @@ const styles = StyleSheet.create({
     fontSize: scaleSize(20),
     fontWeight: '700',
   },
-  
+
   // Profile Card
   profileCard: {
     flexDirection: 'row',
@@ -401,7 +394,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 15,
     marginBottom: 20,
-    
+
   },
   profileIconContainer: {
     marginRight: 15,
@@ -421,7 +414,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     opacity: 0.9,
   },
-  
+
   // Time Card
   timeCard: {
     backgroundColor: '#1A2C3A',
@@ -456,7 +449,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
   },
-  
+
   // Location Card
   locationCard: {
     backgroundColor: '#1A2C3A',
@@ -487,7 +480,7 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     opacity: 0.7,
   },
-  
+
   // Camera Container
   cameraContainer: {
     marginBottom: 20,
@@ -569,7 +562,7 @@ const styles = StyleSheet.create({
     fontSize: scaleSize(16),
     fontWeight: '600',
   },
-  
+
   // Photo Container
   photoContainer: {
     marginBottom: 20,
@@ -618,7 +611,7 @@ const styles = StyleSheet.create({
     fontSize: scaleSize(16),
     fontWeight: '600',
   },
-  
+
   // Photo Prompt
   photoPrompt: {
     backgroundColor: '#1A2C3A',
@@ -661,28 +654,5 @@ const styles = StyleSheet.create({
     fontSize: scaleSize(16),
     fontWeight: '700',
   },
-  
-  // Instructions
-  instructions: {
-    backgroundColor: '#1A2C3A',
-    borderRadius: 15,
-    padding: 20,
-  },
-  instructionsTitle: {
-    color: '#fff',
-    fontSize: scaleSize(16),
-    fontWeight: '600',
-    marginBottom: 15,
-  },
-  instructionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  instructionText: {
-    color: '#B0BEC5',
-    fontSize: scaleSize(14),
-    marginLeft: 12,
-    flex: 1,
-  },
+
 });

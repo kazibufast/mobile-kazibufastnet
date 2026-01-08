@@ -60,7 +60,7 @@ export default function LoginScreen() {
             setUser(data.user);
             setToken(data.token);
 
-            console.log("Session stored:", data.token);
+            
 
             // Navigate depending on user type and status
             if (data.user.user_type.toLowerCase() === "technician") {
@@ -75,7 +75,7 @@ export default function LoginScreen() {
             }
 
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Login failed");
+            Alert.alert("Error", "Oops! We can't find your account");
         } finally {
             setLoading(false);
         }
