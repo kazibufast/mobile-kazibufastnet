@@ -1,6 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import * as Animatable from "react-native-animatable";
+
+import { getUser } from "@/scripts/user";
 import {
   Alert,
   Dimensions,
@@ -16,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
 import { getToken } from "../../scripts/token";
 
+
 const { width } = Dimensions.get("window");
 
 export default function TeamScreen() {
@@ -24,7 +28,7 @@ export default function TeamScreen() {
   const [team, setTeam] = useState<TeamInfo | null>(null);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
-  const user = getToken();
+  const user = getUser();
   const [works, setWorks] = useState<string[]>([]);
 
   const onRefresh = useCallback(() => {
@@ -54,7 +58,7 @@ export default function TeamScreen() {
       const token = getToken();
 
       const response = await fetch(
-        "https://tub.kazibufastnet.com/api/tech/team",
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/team`,
         {
           method: "GET",
           headers: {
@@ -65,6 +69,7 @@ export default function TeamScreen() {
       );
 
       const data = await response.json();
+
 
       if (!data.team) {
         setTeam(null);
@@ -100,7 +105,6 @@ export default function TeamScreen() {
 
       setTeam(teamInfo);
     } catch (error) {
-      
       setTeam(null);
     } finally {
       setLoading(false);
@@ -114,7 +118,7 @@ export default function TeamScreen() {
   const handleComment = async (comments: string) => {
     if (!team?.id) return;
 
-    const url = `https://tub.kazibufastnet.com/api/tech/team/comments`;
+    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/team/comments`;
 
     try {
       const token = await getToken();
@@ -186,26 +190,40 @@ export default function TeamScreen() {
       };
     });
 
-    const getInitials = (name: string) =>
-  name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
+  const getInitials = (name: string) =>
+    name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
 
+  const withDelay = async (promise: Promise<any>, delay = 800) => {
+    await Promise.all([
+      promise,
+      new Promise((resolve) => setTimeout(resolve, delay)),
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
       <Header />
 
-      {/* ⏳ LOADING */}
       {loading && (
-        <View style={styles.center}>
-          <View style={styles.loadingContainer}>
-            <MaterialCommunityIcons name="loading" size={40} color="#00AF9F" />
-            <Text style={styles.loadingText}>Loading team...</Text>
-          </View>
-        </View>
+        <Animatable.View
+          animation="fadeIn"
+          duration={300}
+          style={styles.center}
+        >
+          <Animatable.View
+            animation="rotate"
+            iterationCount="infinite"
+            duration={1000}
+            style={styles.loadingContainer}
+          >
+            <MaterialCommunityIcons name="loading" size={42} color="#00AF9F" />
+          </Animatable.View>
+          <Text style={styles.loadingText}>Loading team...</Text>
+        </Animatable.View>
       )}
 
       {/* 🚫 NO TEAM */}
@@ -213,7 +231,11 @@ export default function TeamScreen() {
         <ScrollView
           contentContainerStyle={styles.emptyScrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              progressBackgroundColor="#FFFFFF"
+            /> 
           }
         >
           <View style={styles.emptyWrapper}>
@@ -251,7 +273,8 @@ export default function TeamScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh}  progressBackgroundColor="#FFFFFF"
+             />
           }
           showsVerticalScrollIndicator={false}
         >
@@ -347,7 +370,9 @@ export default function TeamScreen() {
                       <Text style={styles.memberName} numberOfLines={1}>
                         {member.name?.toUpperCase()}
                       </Text>
-                      <Text style={styles.memberRole}>{member.branch?.toUpperCase()}</Text>
+                      <Text style={styles.memberRole}>
+                        {member.branch?.toUpperCase()}
+                      </Text>
                     </View>
 
                     {/* Index */}
@@ -475,10 +500,12 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: "#64748B",
     fontWeight: "500",
+    letterSpacing: 0.3,
   },
+
   scrollContent: {
     padding: 16,
     paddingBottom: 32,

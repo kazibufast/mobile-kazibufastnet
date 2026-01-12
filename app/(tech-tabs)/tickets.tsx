@@ -1,4 +1,4 @@
-import { getUser, setUser } from "@/scripts/user";
+import { getUser } from "@/scripts/user";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -17,18 +17,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
 import { getToken } from "../../scripts/token";
 
-
-
 interface TicketItem {
   id: string;
   clientName: string;
   status:
-  | "Open"
-  | "Pending"
-  | "InProgress"
-  | "Accepted"
-  | "Completed"
-  | "Closed";
+    | "Open"
+    | "Pending"
+    | "InProgress"
+    | "Accepted"
+    | "Completed"
+    | "Closed";
   type: "Repair" | "Installation" | null;
   subject: string;
   date: string;
@@ -44,24 +42,31 @@ const Ticket: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<
-    "all" | "open" | "pending" | "accepted" | "inProgress" | "completed" | "closed"
+    | "all"
+    | "open"
+    | "pending"
+    | "accepted"
+    | "inProgress"
+    | "completed"
+    | "closed"
   >("all");
 
   const user = getUser();
 
   const params = useLocalSearchParams();
 
-
-
   const fetchTickets = async () => {
+    if (!user?.branch?.subdomain) return;
+
     setRefreshing(true);
     setLoading(true);
+
     try {
       const token = await getToken();
+
       const response = await fetch(
-        "https://tub.kazibufastnet.com/api/tech/tickets",
+        `https://${user.branch.subdomain}.kazibufastnet.com/api/tech/tickets`,
         {
-          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -69,49 +74,41 @@ const Ticket: React.FC = () => {
         }
       );
 
-
       if (!response.ok) {
-        const errorDetails = await response.text();
-        throw new Error(
-          `Failed to fetch tickets. Status: ${response.status}, Details: ${errorDetails}`
-        );
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const data = await response.json();
 
-      setUser(data.user);
-
-
-
       const normalizeStatus = (status: string): TicketItem["status"] => {
-        const s = status.toLowerCase();
+        const s = status?.toLowerCase();
         if (s === "open") return "Open";
         if (s === "pending") return "Pending";
         if (s === "accepted") return "Accepted";
         if (s === "completed") return "Completed";
         if (s === "closed") return "Closed";
         if (s === "in progress") return "InProgress";
-        return "Open"; // fallback
+        return "Open";
       };
 
-      const mappedTickets: TicketItem[] = data.tickets.map((t: any) => ({
-        id: t.id.toString(),
-        clientName: t.client?.name || "Unknown",
-        status: normalizeStatus(t.status),
-        type: t.type
-          ? t.type.toLowerCase() === "repair"
-            ? "Repair"
-            : "Installation"
-          : null,
-        subject: t.subject || "No subject",
-        date: t.created_at || new Date().toISOString(),
-        priority_level: t.priority_level || "",
-        subscription_id: t.subscription.subscription_id || "",
-      }));
-
-      setTickets(mappedTickets);
-    } catch (error: any) {
-      setTickets([]);
+      setTickets(
+        Array.isArray(data.tickets)
+          ? data.tickets.map((t: any) => ({
+              id: String(t.id),
+              clientName: t.client?.name ?? "Unknown",
+              status: normalizeStatus(t.status),
+              type:
+                t.type?.toLowerCase() === "repair" ? "Repair" : "Installation",
+              subject: t.subject ?? "No subject",
+              date: t.created_at ?? new Date().toISOString(),
+              priority_level: t.priority_level ?? "",
+              subscription_id: t.subscription?.subscription_id ?? "",
+            }))
+          : []
+      );
+    } catch (error) {
+      console.error("fetchTickets error:", error);
+      // ❌ DO NOT clear tickets here
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -123,7 +120,6 @@ const Ticket: React.FC = () => {
   }, []);
 
   useEffect(() => {
-
     fetchTickets();
   }, []);
 
@@ -136,18 +132,17 @@ const Ticket: React.FC = () => {
     });
   };
 
-
   useEffect(() => {
     if (params.status) {
       const statusParam = params.status as string;
 
       const filterMap: Record<string, typeof filter> = {
-        'open': 'open',
-        'pending': 'pending',
-        'accepted': 'accepted',
-        'inProgress': 'inProgress',
-        'completed': 'completed',
-        'closed': 'closed'
+        open: "open",
+        pending: "pending",
+        accepted: "accepted",
+        inProgress: "inProgress",
+        completed: "completed",
+        closed: "closed",
       };
 
       if (filterMap[statusParam]) {
@@ -155,7 +150,6 @@ const Ticket: React.FC = () => {
       }
     }
   }, [params.status]);
-
 
   const getStatusConfig = (status: TicketItem["status"]) => {
     switch (status) {
@@ -232,7 +226,7 @@ const Ticket: React.FC = () => {
         case "inProgress":
           return ticket.status === "InProgress";
         case "completed":
-          return ticket.status === "Completed"
+          return ticket.status === "Completed";
         case "closed":
           return ticket.status === "Closed";
         default:
@@ -264,7 +258,7 @@ const Ticket: React.FC = () => {
           </View>
 
           {/* Quick Filter Tabs */}
-          <ScrollView 
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.filterContainer}
@@ -295,16 +289,12 @@ const Ticket: React.FC = () => {
               {
                 key: "completed",
                 label: "Completed",
-                count: tickets.filter(
-                  (t) => t.status === "Completed"
-                ).length,
+                count: tickets.filter((t) => t.status === "Completed").length,
               },
               {
                 key: "closed",
                 label: "Closed",
-                count: tickets.filter(
-                  (t) => t.status === "Closed"
-                ).length,
+                count: tickets.filter((t) => t.status === "Closed").length,
               },
             ].map((tab) => (
               <TouchableOpacity
@@ -508,7 +498,6 @@ const Ticket: React.FC = () => {
                       {/* Compact Content */}
                       <View style={styles.contentRow}>
                         <View style={styles.textContainer}>
-
                           <View style={styles.clientRow}>
                             <Ionicons
                               name="person-outline"
@@ -516,7 +505,8 @@ const Ticket: React.FC = () => {
                               color="#6B7280"
                             />
                             <Text style={styles.clientName} numberOfLines={2}>
-                              {ticket.clientName?.toUpperCase()} - {ticket.subscription_id}
+                              {ticket.clientName?.toUpperCase()} -{" "}
+                              {ticket.subscription_id}
                             </Text>
                           </View>
                           <Text style={styles.subjectText} numberOfLines={1}>

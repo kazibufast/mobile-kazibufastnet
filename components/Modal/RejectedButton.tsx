@@ -1,4 +1,5 @@
 import { getToken } from '@/scripts/token';
+import { getUser } from '@/scripts/user';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -19,9 +20,10 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [comment, setComment] = useState('');
   const { id } = useLocalSearchParams<{ id: string }>();
+  const user = getUser();
 
   const handleReject = async (notes: string) => {
-    const url = `https://tub.kazibufastnet.com/api/tech/tickets/reject/${id}`;
+    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/tickets/reject/${id}`;
 
     try {
       const token = await getToken();
@@ -40,7 +42,7 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
       // Check the response status
       if (response.ok) {
         const responseData = await response.json();
-        console.log('Rejection successful:', responseData);
+        alert('Rejection successful!');
 
         // Redirect to tickets page after rejection
         router.push('/(tech-tabs)/tickets');
@@ -49,11 +51,11 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
         setModalVisible(false);
       } else {
         const errorData = await response.json();
-        console.error('Error rejecting ticket:', errorData);
+        alert('Error rejecting ticket!');
         // Optionally show an error message to the user
       }
     } catch (error) {
-      console.error('Failed to send request:', error);
+      
       // Optionally show an error message to the user
     }
   };

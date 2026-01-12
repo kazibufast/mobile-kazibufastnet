@@ -1,4 +1,5 @@
 import { getToken } from '@/scripts/token';
+import { getUser } from '@/scripts/user';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -26,10 +27,11 @@ const RescheduleButton: React.FC<RescheduleButtonProps> = ({ onConfirm, style })
 
   const openModal = () => setModalVisible(true);
   const closeModal = () => setModalVisible(false);
+  const user = getUser();
 
   // Handle reschedule
   const handleReschedule = async (date: string, notes: string) => {
-    const url = `https://tub.kazibufastnet.com/api/tech/tickets/reschedule/${id}`;
+    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/tickets/reschedule/${id}`;
 
     try {
       const token = await getToken();
@@ -49,7 +51,7 @@ const RescheduleButton: React.FC<RescheduleButtonProps> = ({ onConfirm, style })
       // Check the response status
       if (response.ok) {
         const responseData = await response.json();
-        console.log('Reschedule successful:', responseData);
+        alert('Reschedule successful!');
 
         router.push('/(tech-tabs)/tickets');  
 
@@ -57,12 +59,10 @@ const RescheduleButton: React.FC<RescheduleButtonProps> = ({ onConfirm, style })
         setModalVisible(false); 
       } else {
         const errorData = await response.json();
-        console.error('Error rescheduling:', errorData);
+        alert('Error rescheduling!');
         // Handle error (show error message, etc.)
       }
     } catch (error) {
-      console.error('Failed to send request:', error);
-      // Handle fetch error (network error, etc.)
     }
   };
 

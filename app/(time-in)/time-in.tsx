@@ -54,6 +54,7 @@ export default function TimeInScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
 
   const [pulseAnim] = useState(new Animated.Value(1));
+  const user = getUser();
 
   // Pulse animation for time in button
   useEffect(() => {
@@ -108,7 +109,7 @@ export default function TimeInScreen() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const user = getUser();
+        // const user = getUser();
         setTechnician(user);
 
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -173,7 +174,7 @@ export default function TimeInScreen() {
     try {
       const token = await getToken();
       const res = await fetch(
-        `https://tub.kazibufastnet.com/api/tech/time_in`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/time_in`,
         {
           method: "POST",
           headers: {
@@ -182,27 +183,26 @@ export default function TimeInScreen() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            location: locationCoords,
-            time: new Date().toISOString(),
+            location: locationCoords.latitude + "," + locationCoords.longitude,
+            time: new Date().toLocaleString("en-GB", {
+              hour12: false,
+            }),
+
             picture: photo.base64,
           }),
         }
       );
 
       const data = await res.json();
-      
 
-      if (data.user == 'active') {
+      if (data.user == "active") {
         // Show success alert, then automatically navigate after 1.5 seconds
         Alert.alert("Success", "Time In recorded successfully!");
         setTimeout(() => {
           router.push("/(tech-tabs)/home");
         }, 1500);
       } else {
-        Alert.alert(
-          "Error",
-          "Failed to submit. Please try again."
-        );
+        Alert.alert("Error", "Failed to submit. Please try again.");
       }
     } catch (error) {
       Alert.alert("Error", "Network error. Please check your connection.");

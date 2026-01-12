@@ -7,7 +7,11 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
+
+import { getUser } from "@/scripts/user";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Image,
@@ -28,7 +32,12 @@ import TicketButton from "./TicketButton";
 
 /* ---------------- TYPES ---------------- */
 
-type TicketStatus = "pending" | "accepted" | "in progress" | "completed" | "closed";
+type TicketStatus =
+  | "pending"
+  | "accepted"
+  | "in progress"
+  | "completed"
+  | "closed";
 type TicketButtonProps = {
   label: string;
   onPress: () => void;
@@ -75,12 +84,15 @@ const TicketActionButtons: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
-  
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
   // Modal states
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string>("");
   const [modalImageTitle, setModalImageTitle] = useState<string>("");
+  const user = getUser();
 
+  const STORAGE_KEY = `ticket-draft-${id}`;
   /* ---------------- FETCH TICKET ---------------- */
 
   const fetchTicket = async () => {
@@ -97,7 +109,7 @@ const TicketActionButtons: React.FC = () => {
         }
       );
 
-      if (!res.ok) throw new Error("Failed to fetch ticket");
+      if (!res.ok) alert("Failed to fetch ticket");
 
       const { ticket: t } = await res.json();
 
@@ -125,23 +137,20 @@ const TicketActionButtons: React.FC = () => {
         subject: t.subject,
         pictureCause: t.picture,
         pictureReading: t.picture_reading,
-        branch: t.branch?.subdomain || 'tub',
+        branch: t.branch?.subdomain || "tub",
       });
-  
-      
 
       setStatus(normalizedStatus);
 
       // Check if the ticket is already completed
-      if (t.status === "completed") {
+      if (t.status === "completed" && !draftLoaded) {
         setIsCompleted(true);
         setRemarks(t.remarks || "No remarks provided");
         setPictureCause(t.picture || null);
         setPictureReading(t.picture_reading || null);
       }
-      
-      // Check if the ticket is already closed
-      if (t.status === "closed") {
+
+      if (t.status === "closed" && !draftLoaded) {
         setIsClosed(true);
         setRemarks(t.remarks || "No remarks provided");
         setPictureCause(t.picture || null);
@@ -163,7 +172,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://tub.kazibufastnet.com/api/tech/tickets/accepted/${id}`,
+        `https://${ticket?.branch}.kazibufastnet.com/api/tech/tickets/accepted/${id}`,
         {
           method: "GET",
           headers: {
@@ -174,7 +183,10 @@ const TicketActionButtons: React.FC = () => {
       );
 
       setStatus("accepted");
-      Alert.alert("Success", "Ticket accepted");
+      Alert.alert(
+        "Success",
+        "You have accepted the ticket. Let's get to work!"
+      );
     } catch {
       Alert.alert("Error", "Failed to accept ticket");
     }
@@ -185,7 +197,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://tub.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+        `https://${ticket?.branch}.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
         {
           method: "GET",
           headers: {
@@ -196,7 +208,7 @@ const TicketActionButtons: React.FC = () => {
       );
 
       setStatus("in progress");
-      Alert.alert("Started", "Work started");
+      Alert.alert("Started", "Nice! Works in progress. Keep safe guys!");
     } catch {
       Alert.alert("Error", "Failed to start work");
     }
@@ -217,13 +229,12 @@ const TicketActionButtons: React.FC = () => {
       Alert.alert("No Image", "No image available to preview");
       return;
     }
-    
+
     // Construct full URL for images from backend
     const imageUri = ticket
-  ? `https://${ticket.branch}.kazibufastnet.com/storage/${imageUrl}`
-  : "";
+      ? `https://${user?.branch.subdomain}.kazibufastnet.com/storage/${imageUrl}`
+      : "";
 
-    
     setModalImageUrl(imageUri);
     setModalImageTitle(title);
     setIsImageModalVisible(true);
@@ -294,7 +305,7 @@ const TicketActionButtons: React.FC = () => {
       Alert.alert("Error", "Please fill out all required fields");
       return;
     }
-    const url = `https://tub.kazibufastnet.com/api/tech/tickets/completed/${id}`;
+    const url = `https://${ticket?.branch}.kazibufastnet.com/api/tech/tickets/completed/${id}`;
 
     try {
       const token = await getToken();
@@ -354,9 +365,9 @@ const TicketActionButtons: React.FC = () => {
       });
 
       const data = await response.json();
-      console.log(data);
 
       if (data.status === "success") {
+        await AsyncStorage.removeItem(STORAGE_KEY);
         setIsCompleted(true);
         setRemarks(remarks);
         setPictureCause(pictureCause);
@@ -364,7 +375,6 @@ const TicketActionButtons: React.FC = () => {
         Alert.alert("Success!", "Ticket completed successfully");
         router.push("/(tech-tabs)/tickets");
       } else {
-        console.warn("Submission failed:", data);
         Alert.alert("Error", "Please fill out all fields.");
       }
     } catch (error) {
@@ -378,7 +388,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://tub.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
         {
           method: "GET",
           headers: {
@@ -389,12 +399,12 @@ const TicketActionButtons: React.FC = () => {
       );
 
       setStatus("in progress");
-      Alert.alert("Started", "Work started");
+      Alert.alert("Started", "Nice! Works in progress. Keep safe guys!");
     } catch {
       Alert.alert("Error", "Failed to start work");
     }
   };
-  
+
   const ImageMessage = (ticket: TicketItem | null): string => {
     if (ticket === null || ticket.type === undefined) {
       return "No Ticket";
@@ -428,6 +438,103 @@ const TicketActionButtons: React.FC = () => {
     setInstallationDate(currentDate);
   };
 
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const handleGetLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      await getCurrentLocation(); // your existing function
+    } catch (error) {
+      Alert.alert("Error", "Failed to get location");
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadDraft = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!saved) return;
+
+        const draft = JSON.parse(saved);
+
+        setRemarks(draft.remarks ?? "");
+        setDeviceUse(draft.deviceUse ?? "");
+        setIpAddress(draft.ipAddress ?? "");
+        setMacAddress(draft.macAddress ?? "");
+        setPppoeName(draft.pppoeName ?? "");
+        setLcpNumber(draft.lcpNumber ?? "");
+        setNapNumber(draft.napNumber ?? "");
+        setPortNumber(draft.portNumber ?? "");
+        setTagNumber(draft.tagNumber ?? "");
+        setVlanId(draft.vlanId ?? "");
+        setConnectionType(draft.connectionType ?? "");
+        setLocation(draft.location ?? "");
+        setPictureCause(draft.pictureCause ?? null);
+        setPictureReading(draft.pictureReading ?? null);
+        setInstallationDate(
+          draft.installationDate ? new Date(draft.installationDate) : new Date()
+        );
+        setDraftLoaded(true);
+      } catch (e) {
+        console.log("Failed to load draft", e);
+      }
+    };
+
+    loadDraft();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const saveDraft = async () => {
+      const draft = {
+        remarks,
+        deviceUse,
+        ipAddress,
+        macAddress,
+        pppoeName,
+        lcpNumber,
+        napNumber,
+        portNumber,
+        tagNumber,
+        vlanId,
+        connectionType,
+        location,
+        pictureCause,
+        pictureReading,
+        installationDate: installationDate.toISOString(),
+      };
+
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      } catch (e) {
+        console.log("Failed to save draft", e);
+      }
+    };
+
+    saveDraft();
+  }, [
+    remarks,
+    deviceUse,
+    ipAddress,
+    macAddress,
+    pppoeName,
+    lcpNumber,
+    napNumber,
+    portNumber,
+    tagNumber,
+    vlanId,
+    connectionType,
+    location,
+    pictureCause,
+    pictureReading,
+    installationDate,
+    id,
+  ]);
+
   return (
     <View style={styles.actionButtonsContainer}>
       {/* IMAGE PREVIEW MODAL */}
@@ -445,7 +552,7 @@ const TicketActionButtons: React.FC = () => {
                 <Ionicons name="close" size={30} color="#ffffffff" />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.imageContainer}>
               <Image
                 source={{ uri: modalImageUrl }}
@@ -674,7 +781,13 @@ const TicketActionButtons: React.FC = () => {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.inputLabel}>Location</Text>
+            <View style={styles.LocationHead}>
+              <Text style={styles.inputLabel}>Location *</Text>
+              <Text style={{ color: "red", fontSize: 9, fontWeight: "900" }}>
+                Click the button to get location
+              </Text>
+            </View>
+
             <View style={styles.locationContainer}>
               <TextInput
                 style={[styles.input, styles.locationInput]}
@@ -683,11 +796,17 @@ const TicketActionButtons: React.FC = () => {
                 value={location}
                 onChangeText={setLocation}
               />
+
               <TouchableOpacity
                 style={styles.locationButton}
-                onPress={getCurrentLocation}
+                onPress={handleGetLocation}
+                disabled={isGettingLocation}
               >
-                <Ionicons name="location-outline" size={20} color="#3B82F6" />
+                {isGettingLocation ? (
+                  <ActivityIndicator size="small" color="#9ca6b6ff" />
+                ) : (
+                  <Ionicons name="location-outline" size={20} color="#3B82F6" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -696,8 +815,10 @@ const TicketActionButtons: React.FC = () => {
             <Text style={styles.inputLabel}>{ImageMessage(ticket)}</Text>
             {pictureCause ? (
               <View style={styles.imagePreviewContainer}>
-                <TouchableOpacity 
-                  onPress={() => openImageModal(pictureCause, ImageMessage(ticket))}
+                <TouchableOpacity
+                  onPress={() =>
+                    openImageModal(pictureCause, ImageMessage(ticket))
+                  }
                   activeOpacity={0.8}
                 >
                   <Image
@@ -728,8 +849,10 @@ const TicketActionButtons: React.FC = () => {
             <Text style={styles.inputLabel}>Photo of Reading</Text>
             {pictureReading ? (
               <View style={styles.imagePreviewContainer}>
-                <TouchableOpacity 
-                  onPress={() => openImageModal(pictureReading, "Photo of Reading")}
+                <TouchableOpacity
+                  onPress={() =>
+                    openImageModal(pictureReading, "Photo of Reading")
+                  }
                   activeOpacity={0.8}
                 >
                   <Image
@@ -788,13 +911,15 @@ const TicketActionButtons: React.FC = () => {
               {remarks || "No remarks added"}
             </Text>
           </View>
-          
+
           {/* Cause Picture */}
           <View style={styles.formSection}>
             <Text style={styles.inputLabel}>{ImageMessage(ticket)}</Text>
             {ticket?.pictureCause ? (
-              <TouchableOpacity 
-                onPress={() => openImageModal(ticket.pictureCause, ImageMessage(ticket))}
+              <TouchableOpacity
+                onPress={() =>
+                  openImageModal(ticket.pictureCause, ImageMessage(ticket))
+                }
                 activeOpacity={0.8}
               >
                 <Image
@@ -813,8 +938,10 @@ const TicketActionButtons: React.FC = () => {
           <View style={styles.formSection}>
             <Text style={styles.inputLabel}>Photo of Reading</Text>
             {ticket?.pictureReading ? (
-              <TouchableOpacity 
-                onPress={() => openImageModal(ticket.pictureReading, "Photo of Reading")}
+              <TouchableOpacity
+                onPress={() =>
+                  openImageModal(ticket.pictureReading, "Photo of Reading")
+                }
                 activeOpacity={0.8}
               >
                 <Image
@@ -842,13 +969,15 @@ const TicketActionButtons: React.FC = () => {
               {remarks || "No remarks added"}
             </Text>
           </View>
-          
+
           {/* Cause Picture */}
           <View style={styles.formSection}>
             <Text style={styles.inputLabel}>{ImageMessage(ticket)}</Text>
             {ticket?.pictureCause ? (
-              <TouchableOpacity 
-                onPress={() => openImageModal(ticket.pictureCause, ImageMessage(ticket))}
+              <TouchableOpacity
+                onPress={() =>
+                  openImageModal(ticket.pictureCause, ImageMessage(ticket))
+                }
                 activeOpacity={0.8}
               >
                 <Image
@@ -867,8 +996,10 @@ const TicketActionButtons: React.FC = () => {
           <View style={styles.formSection}>
             <Text style={styles.inputLabel}>Photo of Reading</Text>
             {ticket?.pictureReading ? (
-              <TouchableOpacity 
-                onPress={() => openImageModal(ticket.pictureReading, "Photo of Reading")}
+              <TouchableOpacity
+                onPress={() =>
+                  openImageModal(ticket.pictureReading, "Photo of Reading")
+                }
                 activeOpacity={0.8}
               >
                 <Image
@@ -890,7 +1021,7 @@ const TicketActionButtons: React.FC = () => {
 
 /* ---------------- STYLES ---------------- */
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   actionButtonsContainer: { width: "100%" },
@@ -956,6 +1087,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
+    left: 6,
     borderColor: "#3B82F6",
   },
   uploadButton: {
@@ -977,11 +1109,11 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: { color: "#6B7280", fontSize: 15, fontWeight: "500" },
   imagePreviewContainer: { position: "relative" },
-  imagePreview: { 
-    width: "100%", 
-    height: 200, 
+  imagePreview: {
+    width: "100%",
+    height: 200,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6'
+    backgroundColor: "#F3F4F6",
   },
   removeImageButton: {
     position: "absolute",
@@ -1038,15 +1170,15 @@ const styles = StyleSheet.create({
   noImageText: {
     fontSize: 14,
     color: "#6B7280",
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
     padding: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     borderRadius: 8,
   },
-  
+
   // Modal Styles
-   modalOverlay: {
+  modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
   },
@@ -1110,6 +1242,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  LocationHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  clickHere: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#2259d0ff",
   },
 });
 

@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   Image,
@@ -290,13 +291,45 @@ const Home: React.FC = () => {
     opacity: greeting,
   };
 
-  const getWeatherIcon = (iconCode: string) => {
-    const iconUrl = `https://openweathermap.org/img/wn/${iconCode}.png`;
-    
+  const getWeatherIcon = (description: string) => {
+    const desc = description.toLowerCase();
+
+    let imageSource;
+
+    switch (desc) {
+      case "clear sky":
+        imageSource = require("../../assets/images/clear-sky.png");
+        break;
+      case "few clouds":
+      case "scattered clouds":
+      case "broken clouds":
+      case "overcast clouds":
+        imageSource = require("../../assets/images/cloudy.png");
+        break;
+      case "light rain":
+      case "moderate rain":
+      case "heavy intensity rain":
+        imageSource = require("../../assets/images/rainy-day.png");
+        break;
+      case "thunderstorm":
+        imageSource = require("../../assets/images/thunderstorm.png");
+        break;
+      case "light snow":
+        imageSource = require("../../assets/images/snowy.png");
+        break;
+      case "mist":
+      case "haze":
+      case "fog":
+        imageSource = require("../../assets/images/foggy.png");
+        break;
+      default:
+        imageSource = require("../../assets/images/clear-sky.png");
+        break;
+    }
 
     return (
       <Image
-        source={{ uri: iconUrl }}
+        source={imageSource}
         style={styles.icon}
         resizeMode="contain"
       />
@@ -404,16 +437,16 @@ const Home: React.FC = () => {
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>
                   {/* Convert temperature from Kelvin to Celsius */}
                   {Math.round (weather.main.temp )}°C ·{" "}
-                  {weather.weather[0].description}
+                  {weather.weather[0].main}
                 </Text>
 
                 {/* Render the image dynamically */}
-                {getWeatherIcon(weather.weather[0].icon)}
+                {getWeatherIcon(weather.weather[0].description)}
               </View>
             ) : (
-              <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
-                Weather not loaded
-              </Text>
+              <View>
+                <ActivityIndicator size="small" color="#b8b8b8ff"/>
+              </View>
             )}
           </View>
         </Animated.View>

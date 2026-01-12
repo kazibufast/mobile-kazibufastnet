@@ -2,10 +2,10 @@
   "expo": {
     "name": "KZBU TECHNICIAN",
     "owner": "joshuasalabe",
-    "slug": "kazibu",
+    "slug": "kzbu-technical",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/kazi.png",
+    "icon": "./assets/images/kzbu.png",
     "scheme": [
       "kazibufast"
     ],
@@ -33,20 +33,19 @@
           "twitterauth"
         ],
         "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication",
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera"
+        "NSCameraUsageDescription": "Allow KZBU TECHNICAL to access your camera"
       }
     },
     "android": {
       "package": "com.kazibufast.kazi",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/kazi.png"
+        "foregroundImage": "./assets/images/kzbu.png"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.CALL_PHONE",
         "android.permission.INTERNET",
-        "INTERNET",
         "android.permission.CAMERA"
       ],
       "intentFilters": [
@@ -69,12 +68,30 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/kazi.png"
+      "favicon": "./assets/images/kzbu.png"
     },
     "plugins": [
       "expo-router",
       "react-native-vision-camera",
       "expo-web-browser"
+    ],
+    "splash": {
+      "image": "./assets/images/kzbu.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#00AF9F",
+      "light": {
+        "image": "./assets/images/kzbu.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFFFFF"
+      },
+      "dark": {
+        "image": "./assets/images/kzbu.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#000000"
+      }
+    },
+    "assetBundlePatterns": [
+      "*/"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -83,7 +100,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "4f59d715-1fc9-40de-a77b-f3eed42c4772"
+        "projectId": "43ac0f90-bf85-4db0-bb31-d7ad6a049a5f"
       }
     }
   }

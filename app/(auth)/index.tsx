@@ -1,15 +1,15 @@
 import { useRouter } from 'expo-router'; // Import useRouter
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Easing,
-    Image,
-    Platform,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View
+  Animated,
+  Dimensions,
+  Easing,
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,7 +19,8 @@ const IndexScreen = () => {
   const logoScaleAnim = useRef(new Animated.Value(0)).current;
   const logoOpacityAnim = useRef(new Animated.Value(0)).current;
   const [text, setText] = useState('');
-  const appName = "KAZIBUFAST TECH";
+  const appName = "KAZIBUFASTNET\n    TECHNICAL";
+
   const [index, setIndex] = useState(0);
 
   const router = useRouter(); // Initialize router
@@ -72,7 +73,7 @@ const IndexScreen = () => {
       <View style={styles.container}>
         <Animated.View style={[styles.logoWrapper, { transform: [{ scale: logoScaleAnim }], opacity: logoOpacityAnim }]}>
           <Image
-            source={require("../../assets/images/kazi.png")}
+            source={require("../../assets/images/kzbu.png")}
             style={styles.logo}
             resizeMode="contain"
           />

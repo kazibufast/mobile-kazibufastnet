@@ -1,9 +1,12 @@
 import { getToken } from "@/scripts/token";
+import { getUser } from "@/scripts/user";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, Linking,
+  ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,7 +14,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions
+  useWindowDimensions,
 } from "react-native";
 import {
   SafeAreaView,
@@ -35,16 +38,16 @@ interface TicketItem {
   longitude: string;
 }
 
-
 export default function TicketDetails() {
   const { id } = useLocalSearchParams();
+  const user = getUser();
+
   const router = useRouter();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
   const [ticket, setTicket] = useState<TicketItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();
@@ -54,15 +57,18 @@ export default function TicketDetails() {
   const mapUrl = `https://maps.google.com/maps?q=${ticket?.latitude},${ticket?.longitude}&z=18&output=embed`;
 
   const fetchTicketDetails = useCallback(async () => {
-    if (!id) return;
+    const ticketId = Array.isArray(id) ? id[0] : id;
+
+    if (!ticketId || !user?.branch?.subdomain) return;
 
     setRefreshing(true);
+
     try {
       const token = await getToken();
+
       const response = await fetch(
-        `https://tub.kazibufastnet.com/api/tech/tickets/view/${id}`,
+        `https://${user.branch.subdomain}.kazibufastnet.com/api/tech/tickets/view/${ticketId}`,
         {
-          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -71,54 +77,44 @@ export default function TicketDetails() {
       );
 
       if (!response.ok) {
-        const errorDetails = await response.text();
-        throw new Error(
-          `Failed to fetch ticket. Status: ${response.status}, Details: ${errorDetails}`
-        );
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const data = await response.json();
+
+      if (!data?.ticket) {
+        throw new Error("Ticket missing");
+      }
+
       const t = data.ticket;
 
       setTicket({
-        id: t.id?.toString() ?? "",
-        ticketNumber: t.ticket_number?.toString() ?? "N/A",
-        accountNumber: t.subscription.subscription_id?.toString() ?? "N/A",
+        id: String(t.id),
+        ticketNumber: String(t.ticket_number ?? "N/A"),
+        accountNumber: t.subscription?.subscription_id?.toString() ?? "N/A",
         accountName: t.client?.name ?? "Unknown",
-        installationAddress: t.subscription.installation_address ?? "N/A",
+        installationAddress: t.subscription?.installation_address ?? "N/A",
         mobileNumber: t.client?.mobile_number ?? "N/A",
         status: t.status
           ? t.status.charAt(0).toUpperCase() + t.status.slice(1)
           : "N/A",
-        type: t.type
-          ? t.type.toLowerCase() === "repair"
-            ? "Repair"
-            : "Installation"
-          : "N/A",
+        type: t.type?.toLowerCase() === "repair" ? "Repair" : "Installation",
         date: t.created_at ?? new Date().toISOString(),
         subject: t.subject ?? "N/A",
-        latitude: t.subscription?.latitude,
-        longitude: t.subscription?.longitude,
+        latitude: t.subscription?.latitude ?? null,
+        longitude: t.subscription?.longitude ?? null,
       });
-    } catch (error: any) {
-      Alert.alert(
-  "Notice",
-  "Something went wrong!",
-  [
-    {
-      text: "OK",
-      onPress: () => {
-        // This runs only after user clicks OK
-        router.push("/(tech-tabs)/tickets");
-      },
-    },
-  ],
-  { cancelable: false }
-);
+    } catch (error) {
+      Alert.alert("Notice", "Ticket not available", [
+        {
+          text: "OK",
+          onPress: () => router.back(), // ⬅ safer than push
+        },
+      ]);
     } finally {
       setRefreshing(false);
     }
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     fetchTicketDetails();
@@ -196,7 +192,9 @@ export default function TicketDetails() {
             <View style={styles.row}>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>ACCOUNT NAME</Text>
-                <Text style={styles.cardValue}>{ticket.accountName?.toUpperCase()}</Text>
+                <Text style={styles.cardValue}>
+                  {ticket.accountName?.toUpperCase()}
+                </Text>
               </View>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>MOBILE NUMBER</Text>
@@ -231,7 +229,9 @@ export default function TicketDetails() {
               </View>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>TYPE</Text>
-                <Text style={styles.cardValue}>{ticket.type?.toUpperCase()}</Text>
+                <Text style={styles.cardValue}>
+                  {ticket.type?.toUpperCase()}
+                </Text>
               </View>
             </View>
           </View>
@@ -250,14 +250,16 @@ export default function TicketDetails() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Subject Details</Text>
             <View style={styles.fullCard}>
-              <Text style={styles.subjectText}>{ticket.subject?.toUpperCase()}</Text>
+              <Text style={styles.subjectText}>
+                {ticket.subject?.toUpperCase()}
+              </Text>
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location on Map</Text>
             <WebView
-             key={`${refreshing}`}
+              key={`${refreshing}`}
               source={{
                 uri:
                   "https://tub.kazibufastnet.com/client/map/" +

@@ -69,7 +69,7 @@ const handleUpdate = async (
   newPassword?: string,
   confirmPassword?: string
 ) => {
-  const url = `https://tub.kazibufastnet.com/api/tech/profile/update/${user?.id}`;
+  const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/profile/update`;
 
   try {
     const token = await getToken();

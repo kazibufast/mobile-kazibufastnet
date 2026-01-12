@@ -60,7 +60,7 @@ export default function TechTabsLayout() {
             shadowOffset: { width: 0, height: 0 },
             shadowRadius: 0,
             elevation: 0,
-            borderTopWidth: 0,
+            borderTopWidth: 0.2,
           },
           tabBarLabelStyle: {
             fontSize: scaleSize(11),
