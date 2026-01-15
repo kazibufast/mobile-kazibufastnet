@@ -1,7 +1,7 @@
 import { getToken } from "@/scripts/token";
 import { getUser } from "@/scripts/user";
 import { Fontisto, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { CameraCapturedPicture, CameraType, CameraView } from "expo-camera";
+import { CameraCapturedPicture, CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -19,6 +19,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+
 
 const { width } = Dimensions.get("window");
 
@@ -55,6 +57,16 @@ export default function TimeInScreen() {
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const user = getUser();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+
+  const openCamera = async () => {
+  if (!cameraPermission?.granted) {
+    const { granted } = await requestCameraPermission();
+    if (!granted) return Alert.alert("Camera permission required");
+  }
+  setShowCamera(true);
+};
+
 
   // Pulse animation for time in button
   useEffect(() => {
@@ -202,7 +214,8 @@ export default function TimeInScreen() {
           router.push("/(tech-tabs)/home");
         }, 1500);
       } else {
-        Alert.alert("Error", "Failed to submit. Please try again.");
+        alert( data.message);
+        router.push('/(tech-tabs)/home')
       }
     } catch (error) {
       Alert.alert("Error", "Network error. Please check your connection.");
@@ -366,7 +379,7 @@ export default function TimeInScreen() {
               sure your face is visible and well-lit.
             </Text>
             <TouchableOpacity
-              onPress={() => setShowCamera(true)}
+              onPress={openCamera}
               style={styles.takePhotoButton}
             >
               <Ionicons name="camera" size={24} color="#fff" />
