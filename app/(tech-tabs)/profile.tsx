@@ -96,6 +96,17 @@ const Profile: React.FC = () => {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#999" />
               </TouchableOpacity>
+
+               <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/ProfileSettings/ResetPassword')}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#666" />
+                  <Text style={styles.settingText}>Change Password</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
             </View>
 
 

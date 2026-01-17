@@ -19,11 +19,13 @@ export default function RootLayout() {
         <Stack.Screen name="ProfileSettings/PrivacySecurity" options={{ headerShown: false }} />
         <Stack.Screen name="ProfileSettings/HelpSupport" options={{ headerShown: false }} />
         <Stack.Screen name="ProfileSettings/AboutKazibufast" options={{ headerShown: false }} />
+        <Stack.Screen name="ProfileSettings/ResetPassword" options={{ headerShown: false }} />
 
         <Stack.Screen name="tickets/[id]" options={{ headerShown: false }} />
 
         <Stack.Screen name="(time-in)/time-in" options={{ headerShown: false }} />
         <Stack.Screen name="(time-out)/time-out" options={{ headerShown: false }} />
+        
       </Stack>
       <StatusBar style="auto" />
     </SafeAreaProvider>
