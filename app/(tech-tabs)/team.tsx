@@ -58,7 +58,7 @@ export default function TeamScreen() {
       const token = getToken();
 
       const response = await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/team`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/team`,
         {
           method: "GET",
           headers: {
@@ -118,7 +118,7 @@ export default function TeamScreen() {
   const handleComment = async (comments: string) => {
     if (!team?.id) return;
 
-    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/team/comments`;
+    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/team/comments`;
 
     try {
       const token = await getToken();

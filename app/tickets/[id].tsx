@@ -67,7 +67,7 @@ export default function TicketDetails() {
       const token = await getToken();
 
       const response = await fetch(
-        `https://${user.branch.subdomain}.kazibufastnet.com/api/tech/tickets/view/${ticketId}`,
+        `https://${user.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/view/${ticketId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -262,7 +262,7 @@ export default function TicketDetails() {
               key={`${refreshing}`}
               source={{
                 uri:
-                  "https://tub.kazibufastnet.com/client/map/" +
+                  `https://${user.branch.subdomain}.kazibufastnet.com/client/map/`+
                   ticket.latitude +
                   "/" +
                   ticket.longitude,

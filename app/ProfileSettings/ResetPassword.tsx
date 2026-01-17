@@ -49,7 +49,7 @@ const ResetPassword = () => {
     setIsLoading(true);
 
     try {
-      const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/profile/update/password`;
+      const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/profile/update/password`;
       const token = await getToken();
 
       const body = {

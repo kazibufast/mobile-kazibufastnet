@@ -17,10 +17,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { setToken } from "../../scripts/token";
-import { setUser } from "../../scripts/user";
+import { getUser, setUser } from "../../scripts/user";
 
 export default function LoginScreen() {
     const router = useRouter();
+    const user = getUser();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ export default function LoginScreen() {
             return;
         }
 
-        const url = "https://tub.kazibufastnet.com/api/tech/login";
+        const url = `https://kazibufastnet.com/api/app/tech/login`;
 
         setLoading(true);
         try {

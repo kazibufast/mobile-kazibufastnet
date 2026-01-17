@@ -190,7 +190,7 @@ export default function TimeInScreen() {
     try {
       const token = await getToken();
       const res = await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/time_out`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/time_out`,
         {
           method: "POST",
           headers: {

@@ -23,7 +23,7 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
   const user = getUser();
 
   const handleReject = async (notes: string) => {
-    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/tickets/reject/${id}`;
+    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/reject/${id}`;
 
     try {
       const token = await getToken();

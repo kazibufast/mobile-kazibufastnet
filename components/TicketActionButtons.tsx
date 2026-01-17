@@ -100,7 +100,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       const res = await fetch(
-        `https://tub.kazibufastnet.com/api/tech/tickets/view/${id}`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/view/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -172,7 +172,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://${ticket?.branch}.kazibufastnet.com/api/tech/tickets/accepted/${id}`,
+        `https://${ticket?.branch}.kazibufastnet.com/api/app/tech/tickets/accepted/${id}`,
         {
           method: "GET",
           headers: {
@@ -197,7 +197,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://${ticket?.branch}.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+        `https://${ticket?.branch}.kazibufastnet.com/api/app/tech/tickets/in_progress/${id}`,
         {
           method: "GET",
           headers: {
@@ -305,7 +305,7 @@ const TicketActionButtons: React.FC = () => {
       Alert.alert("Error", "Please fill out all required fields");
       return;
     }
-    const url = `https://${ticket?.branch}.kazibufastnet.com/api/tech/tickets/completed/${id}`;
+    const url = `https://${ticket?.branch}.kazibufastnet.com/api/app/tech/tickets/completed/${id}`;
 
     try {
       const token = await getToken();
@@ -388,7 +388,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/tickets/in_progress/${id}`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/in_progress/${id}`,
         {
           method: "GET",
           headers: {

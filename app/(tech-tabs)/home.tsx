@@ -162,7 +162,7 @@ const Home: React.FC = () => {
       const token = getToken();
 
       const response = await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/tech/home`,
+        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/home`,
         {
           method: "GET",
           headers: {

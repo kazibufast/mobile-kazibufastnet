@@ -65,7 +65,7 @@ const Ticket: React.FC = () => {
       const token = await getToken();
 
       const response = await fetch(
-        `https://${user.branch.subdomain}.kazibufastnet.com/api/tech/tickets`,
+        `https://${user.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -384,7 +384,7 @@ const Ticket: React.FC = () => {
                 <ActivityIndicator size="large" color="#3B82F6" />
                 <Text style={styles.loadingText}>Loading tickets...</Text>
               </View>
-            ) : user?.team_id == null ? (
+            ) : tickets == null ? (
               // NO TEAM STATE
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
