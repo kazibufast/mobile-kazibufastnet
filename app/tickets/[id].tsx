@@ -1,0 +1,435 @@
+import { getToken } from "@/scripts/token";
+import { getUser } from "@/scripts/user";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
+import TicketActionButtons from "../../components/TicketActionButtons";
+
+interface TicketItem {
+  id: string;
+  ticketNumber: string;
+  accountNumber: string;
+  accountName: string;
+  installationAddress: string;
+  mobileNumber: string;
+  status: string;
+  type: string;
+  date: string;
+  subject: string;
+  latitude: string;
+  longitude: string;
+  tagNumber: string;
+  pppoeName: string;
+  pppoePassword: string;
+}
+
+const copyToClipboard = async (text: string) => {
+  await Clipboard.setStringAsync(text);
+  Alert.alert("Copied!", "Text copied to clipboard.");
+};
+
+export default function TicketDetails() {
+  const { id } = useLocalSearchParams();
+  const user = getUser();
+
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  const [ticket, setTicket] = useState<TicketItem | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.push("/(tech-tabs)/tickets");
+  };
+
+  const mapUrl = `https://maps.google.com/maps?q=${ticket?.latitude},${ticket?.longitude}&z=18&output=embed`;
+
+  const fetchTicketDetails = useCallback(async () => {
+    const ticketId = Array.isArray(id) ? id[0] : id;
+
+    if (!ticketId || !user?.branch?.subdomain) return;
+
+    setRefreshing(true);
+
+    try {
+      const token = await getToken();
+
+      const response = await fetch(
+        `https://${user.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/view/${ticketId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data?.ticket) {
+        throw new Error("Ticket missing");
+      }
+
+      const t = data.ticket;
+
+      setTicket({
+        id: String(t.id),
+        ticketNumber: String(t.ticket_number ?? "N/A"),
+        accountNumber: t.subscription?.subscription_id?.toString() ?? "N/A",
+        accountName: t.client?.name ?? "Unknown",
+        installationAddress: t.subscription?.installation_address ?? "N/A",
+        mobileNumber: t.client?.mobile_number ?? "N/A",
+        status: t.status
+          ? t.status.charAt(0).toUpperCase() + t.status.slice(1)
+          : "N/A",
+        type: t.type?.toLowerCase() === "repair" ? "Repair" : "Installation",
+        date: t.created_at ?? new Date().toISOString(),
+        subject: t.subject ?? "N/A",
+        latitude: t.subscription?.latitude ?? null,
+        longitude: t.subscription?.longitude ?? null,
+
+        tagNumber: t.subscription?.job_order.span_no ?? "N/A",
+        pppoeName: t.subscription?.job_order.pppoe_name ?? "N/A",
+        pppoePassword: t.subscription?.job_order.pppoe_password ?? "N/A",
+      });
+    } catch (error) {
+      Alert.alert("Notice", "Ticket not available", [
+        {
+          text: "OK",
+          onPress: () => router.back(), // ⬅ safer than push
+        },
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [id, user]);
+
+  useEffect(() => {
+    fetchTicketDetails();
+  }, [fetchTicketDetails]);
+
+  const formatDateTime = (isoDate: string) => {
+    const date = new Date(isoDate);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const cardMargin = 8;
+  const screenPadding = 16;
+  const getCardWidth = () => (width - screenPadding * 2 - cardMargin) / 2;
+
+  if (!ticket) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator
+          size="large"
+          color="#3498DB"
+          style={{ marginTop: 50 }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#2D3748" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Ticket Details
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {/* Content */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: 76 + (insets.bottom || 16) },
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={fetchTicketDetails}
+              tintColor="#3498DB"
+            />
+          }
+        >
+          {/* Account Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ticket Information</Text>
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <Text style={styles.cardLabel}>TICKET NUMBER</Text>
+                <Text style={styles.cardValue}>{ticket.ticketNumber}</Text>
+              </View>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <Text style={styles.cardLabel}>ACCOUNT NUMBER</Text>
+                <Text style={styles.cardValue}>{ticket.accountNumber}</Text>
+              </View>
+            </View>
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <Text style={styles.cardLabel}>ACCOUNT NAME</Text>
+                <Text style={styles.cardValue}>
+                  {ticket.accountName?.toUpperCase()}
+                </Text>
+              </View>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <Text style={styles.cardLabel}>MOBILE NUMBER</Text>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <Text style={styles.cardValue}>{ticket.mobileNumber}</Text>
+
+                  <Pressable
+                    onPress={() =>
+                      Linking.openURL(
+                        `tel:${ticket.mobileNumber.replace(/[^0-9+]/g, "")}`,
+                      )
+                    }
+                  >
+                    <Ionicons name="call-outline" size={24} color="#16a34a" />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <Text style={styles.cardLabel}>DATE</Text>
+                <Text style={styles.cardValue}>
+                  {formatDateTime(ticket.date?.toUpperCase())}
+                </Text>
+              </View>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <Text style={styles.cardLabel}>TYPE</Text>
+                <Text style={styles.cardValue}>
+                  {ticket.type?.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            {/* Installation Address */}
+            <View style={styles.section}>
+              <View style={styles.fullCard}>
+                <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
+                <Text style={styles.fullCardValue}>
+                  {ticket.installationAddress?.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.cardLabel}>PPPOE Name</Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(ticket.pppoeName)}
+                  >
+                    <MaterialIcons name="content-copy" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.cardValue}>{ticket.pppoeName}</Text>
+              </View>
+
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.cardLabel}>PPPOE Password</Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(ticket.pppoePassword)}
+                  >
+                    <MaterialIcons name="content-copy" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.cardValue}>{ticket.pppoePassword}</Text>
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.cardLabel}>tag Number</Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(ticket.tagNumber)}
+                  >
+                    <MaterialIcons name="content-copy" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.cardValue}>{ticket.tagNumber}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Subject */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Subject Details</Text>
+            <View style={styles.fullCard}>
+              <Text style={styles.subjectText}>
+                {ticket.subject?.toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Location on Map</Text>
+            <WebView
+              key={`${refreshing}`}
+              source={{
+                uri:
+                  `https://${user.branch.subdomain}.kazibufastnet.com/client/map/` +
+                  ticket.latitude +
+                  "/" +
+                  ticket.longitude,
+              }}
+              style={styles.webview}
+            />
+          </View>
+
+          {/* Action Buttons */}
+          <TicketActionButtons ticket={ticket} />
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#00AF9F",
+    paddingTop: 35,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffffff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  webview: {
+    height: 300,
+  },
+
+  backButton: {
+    padding: 5,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2D3748",
+    textAlign: "center",
+    flex: 1,
+  },
+  scrollView: { flex: 1 },
+  content: { padding: 16 },
+  section: { marginBottom: 5 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2D3748",
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  card: {
+    backgroundColor: "#F7FAFC",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    minHeight: 70,
+    justifyContent: "center",
+    flexShrink: 1,
+  },
+  cardLabel: {
+    fontSize: 11,
+    color: "#718096",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  cardValue: { fontSize: 15, fontWeight: "600", color: "#2D3748" },
+  fullCard: {
+    backgroundColor: "#F7FAFC",
+    borderRadius: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  fullCardLabel: {
+    fontSize: 11,
+    color: "#718096",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  fullCardValue: { fontSize: 15, fontWeight: "600", color: "#2D3748" },
+  subjectText: { fontSize: 14, color: "#2D3748", lineHeight: 20 },
+  copyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+});
