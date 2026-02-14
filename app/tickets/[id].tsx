@@ -1,8 +1,10 @@
 import { getToken } from "@/scripts/token";
 import { getUser } from "@/scripts/user";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -36,7 +38,15 @@ interface TicketItem {
   subject: string;
   latitude: string;
   longitude: string;
+  tagNumber: string;
+  pppoeName: string;
+  pppoePassword: string;
 }
+
+const copyToClipboard = async (text: string) => {
+  await Clipboard.setStringAsync(text);
+  Alert.alert("Copied!", "Text copied to clipboard.");
+};
 
 export default function TicketDetails() {
   const { id } = useLocalSearchParams();
@@ -73,7 +83,7 @@ export default function TicketDetails() {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -103,6 +113,10 @@ export default function TicketDetails() {
         subject: t.subject ?? "N/A",
         latitude: t.subscription?.latitude ?? null,
         longitude: t.subscription?.longitude ?? null,
+
+        tagNumber: t.subscription?.job_order.span_no ?? "N/A",
+        pppoeName: t.subscription?.job_order.pppoe_name ?? "N/A",
+        pppoePassword: t.subscription?.job_order.pppoe_password ?? "N/A",
       });
     } catch (error) {
       Alert.alert("Notice", "Ticket not available", [
@@ -178,7 +192,7 @@ export default function TicketDetails() {
         >
           {/* Account Info */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Information</Text>
+            <Text style={styles.sectionTitle}>Ticket Information</Text>
             <View style={styles.row}>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>TICKET NUMBER</Text>
@@ -211,7 +225,7 @@ export default function TicketDetails() {
                   <Pressable
                     onPress={() =>
                       Linking.openURL(
-                        `tel:${ticket.mobileNumber.replace(/[^0-9+]/g, "")}`
+                        `tel:${ticket.mobileNumber.replace(/[^0-9+]/g, "")}`,
                       )
                     }
                   >
@@ -220,6 +234,7 @@ export default function TicketDetails() {
                 </View>
               </View>
             </View>
+
             <View style={styles.row}>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <Text style={styles.cardLabel}>DATE</Text>
@@ -234,15 +249,57 @@ export default function TicketDetails() {
                 </Text>
               </View>
             </View>
-          </View>
 
-          {/* Installation Address */}
-          <View style={styles.section}>
-            <View style={styles.fullCard}>
-              <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
-              <Text style={styles.fullCardValue}>
-                {ticket.installationAddress?.toUpperCase()}
-              </Text>
+            {/* Installation Address */}
+            <View style={styles.section}>
+              <View style={styles.fullCard}>
+                <Text style={styles.fullCardLabel}>INSTALLATION ADDRESS</Text>
+                <Text style={styles.fullCardValue}>
+                  {ticket.installationAddress?.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.cardLabel}>PPPOE Name</Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(ticket.pppoeName)}
+                  >
+                    <MaterialIcons name="content-copy" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.cardValue}>{ticket.pppoeName}</Text>
+              </View>
+
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.cardLabel}>PPPOE Password</Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(ticket.pppoePassword)}
+                  >
+                    <MaterialIcons name="content-copy" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.cardValue}>{ticket.pppoePassword}</Text>
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.card, { width: getCardWidth() }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.cardLabel}>tag Number</Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(ticket.tagNumber)}
+                  >
+                    <MaterialIcons name="content-copy" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.cardValue}>{ticket.tagNumber}</Text>
+              </View>
             </View>
           </View>
 
@@ -262,7 +319,7 @@ export default function TicketDetails() {
               key={`${refreshing}`}
               source={{
                 uri:
-                  `https://${user.branch.subdomain}.kazibufastnet.com/client/map/`+
+                  `https://${user.branch.subdomain}.kazibufastnet.com/client/map/` +
                   ticket.latitude +
                   "/" +
                   ticket.longitude,
@@ -365,4 +422,14 @@ const styles = StyleSheet.create({
   },
   fullCardValue: { fontSize: 15, fontWeight: "600", color: "#2D3748" },
   subjectText: { fontSize: 14, color: "#2D3748", lineHeight: 20 },
+  copyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 });

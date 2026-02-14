@@ -19,6 +19,7 @@ import { getToken } from "../../scripts/token";
 
 interface TicketItem {
   id: string;
+  ticketNumber: string;
   clientName: string;
   status:
     | "Open"
@@ -71,7 +72,7 @@ const Ticket: React.FC = () => {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -95,6 +96,7 @@ const Ticket: React.FC = () => {
         Array.isArray(data.tickets)
           ? data.tickets.map((t: any) => ({
               id: String(t.id),
+              ticketNumber: t.ticket_number ?? "N/A",
               clientName: t.client?.name ?? "Unknown",
               status: normalizeStatus(t.status),
               type:
@@ -104,7 +106,7 @@ const Ticket: React.FC = () => {
               priority_level: t.priority_level ?? "",
               subscription_id: t.subscription?.subscription_id ?? "",
             }))
-          : []
+          : [],
       );
     } catch (error) {
       console.error("fetchTickets error:", error);
@@ -237,7 +239,7 @@ const Ticket: React.FC = () => {
       (ticket) =>
         ticket.clientName.toLowerCase().includes(search.toLowerCase()) ||
         ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.id.toLowerCase().includes(search.toLowerCase())
+        ticket.id.toLowerCase().includes(search.toLowerCase()),
     );
 
   return (
@@ -432,7 +434,7 @@ const Ticket: React.FC = () => {
                   const statusConfig = getStatusConfig(ticket.status);
                   const typeConfig = getTypeIcon(ticket.type);
                   const priority_level = getPriorityStatus(
-                    ticket.priority_level
+                    ticket.priority_level,
                   );
 
                   return (
@@ -451,7 +453,9 @@ const Ticket: React.FC = () => {
                               size={15}
                               color="#6B7280"
                             />
-                            <Text style={styles.ticketIdText}>{ticket.id}</Text>
+                            <Text style={styles.ticketIdText}>
+                              {ticket.ticketNumber}
+                            </Text>
                           </View>
                           <View
                             style={[

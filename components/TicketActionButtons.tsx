@@ -77,6 +77,7 @@ const TicketActionButtons: React.FC = () => {
   const [tagNumber, setTagNumber] = useState("");
   const [connectionType, setConnectionType] = useState("");
   const [vlanId, setVlanId] = useState("");
+  const [wireUsed, setWireUsed] = useState(0);
   const [location, setLocation] = useState("");
   const [pictureCause, setPictureCause] = useState<string | null>(null);
   const [pictureReading, setPictureReading] = useState<string | null>(null);
@@ -106,7 +107,7 @@ const TicketActionButtons: React.FC = () => {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-        }
+        },
       );
 
       if (!res.ok) alert("Failed to fetch ticket");
@@ -117,12 +118,12 @@ const TicketActionButtons: React.FC = () => {
         t.status === "accepted"
           ? "accepted"
           : t.status === "in progress"
-          ? "in progress"
-          : t.status === "completed"
-          ? "completed"
-          : t.status === "closed"
-          ? "closed"
-          : "pending";
+            ? "in progress"
+            : t.status === "completed"
+              ? "completed"
+              : t.status === "closed"
+                ? "closed"
+                : "pending";
 
       setTicket({
         id: String(t.id),
@@ -179,13 +180,13 @@ const TicketActionButtons: React.FC = () => {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-        }
+        },
       );
 
       setStatus("accepted");
       Alert.alert(
         "Success",
-        "You have accepted the ticket. Let's get to work!"
+        "You have accepted the ticket. Let's get to work!",
       );
     } catch {
       Alert.alert("Error", "Failed to accept ticket");
@@ -204,7 +205,7 @@ const TicketActionButtons: React.FC = () => {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-        }
+        },
       );
 
       setStatus("in progress");
@@ -257,7 +258,7 @@ const TicketActionButtons: React.FC = () => {
 
     const loc = await Location.getCurrentPositionAsync({});
     setLocation(
-      `${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`
+      `${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`,
     );
     Alert.alert("Location Updated", "Current location has been added");
   };
@@ -266,7 +267,7 @@ const TicketActionButtons: React.FC = () => {
 
   const pickImage = async (
     setter: (uri: string | null) => void,
-    label: string
+    label: string,
   ) => {
     if (Platform.OS !== "web") {
       const { status } =
@@ -279,8 +280,8 @@ const TicketActionButtons: React.FC = () => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false, // ← Changed from true to false
+      // aspect: [4, 3],     ← Remove this line completely
       quality: 0.8,
     });
 
@@ -299,7 +300,7 @@ const TicketActionButtons: React.FC = () => {
     remarks: string,
     location: string,
     pictureCause: string | null,
-    pictureReading: string | null
+    pictureReading: string | null,
   ) => {
     if (!location) {
       Alert.alert("Error", "Please fill out all required fields");
@@ -319,9 +320,12 @@ const TicketActionButtons: React.FC = () => {
       formData.append("mac_address", macAddress || "");
       formData.append(
         "installation_date",
-        installationDate.toLocaleDateString()
+        installationDate.toLocaleDateString(),
       );
       formData.append("type", connectionType);
+
+      // ✅ ALWAYS send tag number (from the general field)
+      formData.append("tag_no", tagNumber || "");
 
       // Append PPPOE Name for wireless
       if (connectionType === "wireless") {
@@ -333,8 +337,9 @@ const TicketActionButtons: React.FC = () => {
         formData.append("lcp_no", lcpNumber || "");
         formData.append("nap_no", napNumber || "");
         formData.append("port_no", portNumber || "");
-        formData.append("tag_no", tagNumber || "");
+        // formData.append("tag_no", tagNumber || ""); // ← Remove this duplicate
         formData.append("vlan_id", vlanId || "");
+        formData.append("wire_used", wireUsed.toString() || "0");
       }
 
       const appendImage = (fieldName: string, uri: string | null) => {
@@ -395,7 +400,7 @@ const TicketActionButtons: React.FC = () => {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-        }
+        },
       );
 
       setStatus("in progress");
@@ -429,6 +434,7 @@ const TicketActionButtons: React.FC = () => {
       setPortNumber("");
       setTagNumber("");
       setVlanId("");
+      setWireUsed(0);
     }
   };
 
@@ -470,12 +476,15 @@ const TicketActionButtons: React.FC = () => {
         setPortNumber(draft.portNumber ?? "");
         setTagNumber(draft.tagNumber ?? "");
         setVlanId(draft.vlanId ?? "");
+        setWireUsed(draft.wireUsed ?? 0);
         setConnectionType(draft.connectionType ?? "");
         setLocation(draft.location ?? "");
         setPictureCause(draft.pictureCause ?? null);
         setPictureReading(draft.pictureReading ?? null);
         setInstallationDate(
-          draft.installationDate ? new Date(draft.installationDate) : new Date()
+          draft.installationDate
+            ? new Date(draft.installationDate)
+            : new Date(),
         );
         setDraftLoaded(true);
       } catch (e) {
@@ -761,6 +770,16 @@ const TicketActionButtons: React.FC = () => {
                       onChangeText={setVlanId}
                     />
                   </View>
+                  <View style={styles.formSection}>
+                    <Text style={styles.inputLabel}>Wire Used</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Wire in meters"
+                      value={wireUsed.toString()}
+                      keyboardType="numeric"
+                      onChangeText={(text) => setWireUsed(Number(text))}
+                    />
+                  </View>
                 </>
               )}
             </>
@@ -774,6 +793,20 @@ const TicketActionButtons: React.FC = () => {
               placeholderTextColor="#94A3B8"
               value={remarks}
               onChangeText={setRemarks}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.formSection}>
+            <Text style={styles.inputLabel}>Tag Number</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Enter Tag Number (Optional)"
+              placeholderTextColor="#94A3B8"
+              value={tagNumber} /* ← Fixed: Now using tagNumber state */
+              onChangeText={setTagNumber}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -890,7 +923,7 @@ const TicketActionButtons: React.FC = () => {
                   remarks,
                   location,
                   pictureCause,
-                  pictureReading
+                  pictureReading,
                 )
               }
             >
