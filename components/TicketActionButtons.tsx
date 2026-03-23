@@ -8,6 +8,8 @@ import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 
+import { API } from "@/constants/api";
+import { showToast } from "@/components/Toast";
 import { getUser } from "@/scripts/user";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -101,7 +103,7 @@ const TicketActionButtons: React.FC = () => {
       const token = await getToken();
 
       const res = await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/view/${id}`,
+        API.tech.viewTicket(id),
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -110,7 +112,7 @@ const TicketActionButtons: React.FC = () => {
         },
       );
 
-      if (!res.ok) alert("Failed to fetch ticket");
+      if (!res.ok) showToast("Failed to fetch ticket", "error");
 
       const { ticket: t } = await res.json();
 
@@ -158,7 +160,7 @@ const TicketActionButtons: React.FC = () => {
         setPictureReading(t.picture_reading || null);
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to load ticket");
+      showToast("Unable to load ticket", "error");
     }
   };
 
@@ -172,10 +174,10 @@ const TicketActionButtons: React.FC = () => {
     try {
       const token = await getToken();
 
-      await fetch(
-        `https://${ticket?.branch}.kazibufastnet.com/api/app/tech/tickets/accepted/${id}`,
+      const res = await fetch(
+        API.tech.acceptTicket(id),
         {
-          method: "GET",
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -183,13 +185,17 @@ const TicketActionButtons: React.FC = () => {
         },
       );
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast(data.message || "Failed to accept ticket", "error");
+        return;
+      }
+
       setStatus("accepted");
-      Alert.alert(
-        "Success",
-        "You have accepted the ticket. Let's get to work!",
-      );
+      showToast("You have accepted the ticket. Let's get to work!", "success");
     } catch {
-      Alert.alert("Error", "Failed to accept ticket");
+      showToast("Failed to accept ticket", "error");
     }
   };
 
@@ -197,10 +203,10 @@ const TicketActionButtons: React.FC = () => {
     try {
       const token = await getToken();
 
-      await fetch(
-        `https://${ticket?.branch}.kazibufastnet.com/api/app/tech/tickets/in_progress/${id}`,
+      const res = await fetch(
+        API.tech.inProgressTicket(id),
         {
-          method: "GET",
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -208,32 +214,39 @@ const TicketActionButtons: React.FC = () => {
         },
       );
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast(data.message || "Failed to start work", "error");
+        return;
+      }
+
       setStatus("in progress");
-      Alert.alert("Started", "Nice! Works in progress. Keep safe guys!");
+      showToast("Nice! Works in progress. Keep safe guys!", "success");
     } catch {
-      Alert.alert("Error", "Failed to start work");
+      showToast("Failed to start work", "error");
     }
   };
 
   const handleReject = () => {
-    Alert.alert("Rejected", "Ticket has been rejected");
+    showToast("Ticket has been rejected", "info");
   };
 
   const handleRescheduleConfirm = () => {
-    Alert.alert("Rescheduled", "Ticket rescheduled successfully");
+    showToast("Ticket rescheduled successfully", "success");
   };
 
   /* ---------------- MODAL FUNCTIONS ---------------- */
 
   const openImageModal = (imageUrl: string, title: string) => {
     if (!imageUrl) {
-      Alert.alert("No Image", "No image available to preview");
+      showToast("No image available to preview", "info");
       return;
     }
 
     // Construct full URL for images from backend
     const imageUri = ticket
-      ? `https://${user?.branch.subdomain}.kazibufastnet.com/storage/${imageUrl}`
+      ? API.storage(imageUrl)
       : "";
 
     setModalImageUrl(imageUri);
@@ -252,7 +265,7 @@ const TicketActionButtons: React.FC = () => {
   const getCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Error", "Location permission is required");
+      showToast("Location permission is required", "error");
       return;
     }
 
@@ -260,7 +273,7 @@ const TicketActionButtons: React.FC = () => {
     setLocation(
       `${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`,
     );
-    Alert.alert("Location Updated", "Current location has been added");
+    showToast("Current location has been added", "success");
   };
 
   /* ---------------- IMAGE PICKER ---------------- */
@@ -273,13 +286,13 @@ const TicketActionButtons: React.FC = () => {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow access to photos");
+        showToast("Please allow access to photos", "error");
         return;
       }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: false, // ← Changed from true to false
       // aspect: [4, 3],     ← Remove this line completely
       quality: 0.8,
@@ -287,13 +300,13 @@ const TicketActionButtons: React.FC = () => {
 
     if (!result.canceled) {
       setter(result.assets[0].uri);
-      Alert.alert("Success", `${label} picture attached`);
+      showToast(`${label} picture attached`, "success");
     }
   };
 
   const removeImage = (setter: (uri: string | null) => void, label: string) => {
     setter(null);
-    Alert.alert("Removed", `${label} picture removed`);
+    showToast(`${label} picture removed`, "info");
   };
 
   const handleSubmitCompleted = async (
@@ -303,10 +316,10 @@ const TicketActionButtons: React.FC = () => {
     pictureReading: string | null,
   ) => {
     if (!location) {
-      Alert.alert("Error", "Please fill out all required fields");
+      showToast("Please fill out all required fields", "error");
       return;
     }
-    const url = `https://${ticket?.branch}.kazibufastnet.com/api/app/tech/tickets/completed/${id}`;
+    const url = API.tech.completeTicket(id);
 
     try {
       const token = await getToken();
@@ -371,19 +384,20 @@ const TicketActionButtons: React.FC = () => {
 
       const data = await response.json();
 
-      if (data.status === "success") {
-        await AsyncStorage.removeItem(STORAGE_KEY);
-        setIsCompleted(true);
-        setRemarks(remarks);
-        setPictureCause(pictureCause);
-        setPictureReading(pictureReading);
-        Alert.alert("Success!", "Ticket completed successfully");
-        router.push("/(tech-tabs)/tickets");
-      } else {
-        Alert.alert("Error", "Please fill out all fields.");
+      if (!response.ok) {
+        showToast(data.message || "Failed to complete ticket", "error");
+        return;
       }
+
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      setIsCompleted(true);
+      setRemarks(remarks);
+      setPictureCause(pictureCause);
+      setPictureReading(pictureReading);
+      showToast("Ticket completed successfully", "success");
+      router.push("/(tech-tabs)/tickets");
     } catch (error) {
-      Alert.alert("Error", "An error occurred while submitting the ticket.");
+      showToast("An error occurred while submitting the ticket.", "error");
     }
   };
 
@@ -392,10 +406,10 @@ const TicketActionButtons: React.FC = () => {
     try {
       const token = await getToken();
 
-      await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/in_progress/${id}`,
+      const res = await fetch(
+        API.tech.inProgressTicket(id),
         {
-          method: "GET",
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -403,10 +417,17 @@ const TicketActionButtons: React.FC = () => {
         },
       );
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast(data.message || "Failed to start work", "error");
+        return;
+      }
+
       setStatus("in progress");
-      Alert.alert("Started", "Nice! Works in progress. Keep safe guys!");
+      showToast("Nice! Works in progress. Keep safe guys!", "success");
     } catch {
-      Alert.alert("Error", "Failed to start work");
+      showToast("Failed to start work", "error");
     }
   };
 
@@ -450,7 +471,7 @@ const TicketActionButtons: React.FC = () => {
       setIsGettingLocation(true);
       await getCurrentLocation(); // your existing function
     } catch (error) {
-      Alert.alert("Error", "Failed to get location");
+      showToast("Failed to get location", "error");
     } finally {
       setIsGettingLocation(false);
     }
@@ -957,7 +978,7 @@ const TicketActionButtons: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureCause}`,
+                    uri: API.storage(ticket.pictureCause),
                   }}
                   style={styles.imagePreview}
                 />
@@ -979,7 +1000,7 @@ const TicketActionButtons: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureReading}`,
+                    uri: API.storage(ticket.pictureReading),
                   }}
                   style={styles.imagePreview}
                 />
@@ -1015,7 +1036,7 @@ const TicketActionButtons: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureCause}`,
+                    uri: API.storage(ticket.pictureCause),
                   }}
                   style={styles.imagePreview}
                 />
@@ -1037,7 +1058,7 @@ const TicketActionButtons: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: `https://${ticket.branch}.kazibufastnet.com/storage/${ticket.pictureReading}`,
+                    uri: API.storage(ticket.pictureReading),
                   }}
                   style={styles.imagePreview}
                 />

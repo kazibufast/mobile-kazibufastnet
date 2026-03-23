@@ -90,7 +90,7 @@ const AddTicket: React.FC = () => {
             }
 
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                mediaTypes: ["images"],
                 allowsEditing: true,
                 quality: 0.8,
                 base64: false,
@@ -124,7 +124,7 @@ const AddTicket: React.FC = () => {
             }
 
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+                mediaTypes: ["videos"],
                 allowsEditing: true,
                 quality: 0.8,
                 videoMaxDuration: 60,

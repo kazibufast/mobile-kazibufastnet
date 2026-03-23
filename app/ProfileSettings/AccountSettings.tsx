@@ -3,14 +3,16 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Header from '../../components/Header';
+import { getUser } from '../../scripts/user';
 
 const AccountSettings: React.FC = () => {
   const router = useRouter();
+  const user = getUser();
   const [userData, setUserData] = useState({
-    fullName: 'Mono User',
-    email: 'mono@kazibufast.com',
-    phone: '09508221851',
-    address: 'Centro Ingud Bohol',
+    fullName: user?.name || '',
+    email: user?.email || '',
+    phone: user?.mobile_number || '',
+    address: '',
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -52,7 +54,7 @@ const AccountSettings: React.FC = () => {
           <View style={styles.formContainer}>
             {/* Full Name */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>{user?.name}</Text>
+              <Text style={styles.label}>Full Name</Text>
               {isEditing ? (
                 <TextInput
                   style={styles.input}

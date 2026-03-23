@@ -1,303 +1,371 @@
+import { API } from '@/constants/api';
+import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import Header from '../../components/Header';
 
-
-
-
-// Define types for ticket data
 interface TicketItem {
-  id: string;
-  clientName: string;
-  status: 'Open' | 'Pending' | 'Accepted' | 'Completed' | 'Closed';
-  type: 'Repair' | 'Installation';
+  id: number;
+  ticket_number: string;
   subject: string;
-  date: string;
+  status: string;
+  type: string;
+  created_at: string;
+  client?: { name: string };
 }
+
+const STATUS_FILTERS = [
+  { label: 'All', value: '' },
+  { label: 'Open', value: 'open', color: '#3498DB' },
+  { label: 'Pending', value: 'pending', color: '#F39C12' },
+  { label: 'Accepted', value: 'accepted', color: '#8E44AD' },
+  { label: 'In Progress', value: 'in progress', color: '#E67E22' },
+  { label: 'Completed', value: 'completed', color: '#27AE60' },
+  { label: 'Closed', value: 'closed', color: '#7F8C8D' },
+];
+
+const TYPE_FILTERS = [
+  { label: 'All Types', value: '' },
+  { label: 'Repair', value: 'repair' },
+  { label: 'Installation', value: 'installation' },
+];
 
 const Ticket: React.FC = () => {
   const router = useRouter();
 
-  const [searchVisible, setSearchVisible] = React.useState(false);
-  const [search, setSearch] = React.useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [search, setSearch] = useState('');
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
 
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+
+  const fetchTickets = useCallback(async (page = 1, append = false, status = statusFilter, type = typeFilter) => {
+    try {
+      const token = await getToken();
+      let url = `${API.tech.tickets()}?page=${page}&per_page=10`;
+      if (status) url += `&status=${encodeURIComponent(status)}`;
+      if (type) url += `&type=${encodeURIComponent(type)}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const newTickets = data.data || [];
+
+      if (append) {
+        setTickets(prev => {
+          const existingIds = new Set(prev.map(t => t.id));
+          const unique = newTickets.filter((t: TicketItem) => !existingIds.has(t.id));
+          return [...prev, ...unique];
+        });
+      } else {
+        setTickets(newTickets);
+      }
+
+      setCurrentPage(data.current_page);
+      setLastPage(data.last_page);
+    } catch {} finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+    }
+  }, [statusFilter, typeFilter]);
+
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setCurrentPage(1);
+    fetchTickets(1, false);
+  }, [fetchTickets]);
+
+  const onEndReached = useCallback(() => {
+    if (loadingMore || currentPage >= lastPage) return;
+    setLoadingMore(true);
+    fetchTickets(currentPage + 1, true);
+  }, [loadingMore, currentPage, lastPage, fetchTickets]);
+
+  const applyStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setLoading(true);
+    setTickets([]);
+    setCurrentPage(1);
+    fetchTickets(1, false, value, typeFilter);
+  };
+
+  const applyTypeFilter = (value: string) => {
+    setTypeFilter(value);
+    setLoading(true);
+    setTickets([]);
+    setCurrentPage(1);
+    fetchTickets(1, false, statusFilter, value);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  // Get time for display
   const getTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
-  // Sample ticket data
-  const tickets: TicketItem[] = [
-    {
-      id: 'KAZ-1101',
-      clientName: 'John Smith',
-      status: 'Open',
-      type: 'Repair',
-      subject: 'Internet connection dropping intermittently',
-      date: new Date().toISOString(), // Today
-
-    },
-    {
-      id: 'KAZ-1102',
-      clientName: 'Sarah Johnson',
-      status: 'Pending',
-      type: 'Installation',
-      subject: 'Slow internet speeds in downtown area',
-      date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-
-    },
-    {
-      id: 'KAZ-1103',
-      clientName: 'Robert Chen',
-      status: 'Completed',
-      type: 'Repair',
-      subject: 'Invoice discrepancy for December billing',
-      date: '2024-01-13T09:15:00',
-
-    },
-    {
-      id: 'KAZ-1104',
-      clientName: 'Maria Garcia',
-      status: 'Pending',
-      type: 'Repair',
-      subject: 'Router replacement needed',
-      date: '2024-01-12T16:20:00',
-
-    },
-    {
-      id: 'KAZ-1105',
-      clientName: 'David Wilson',
-      status: 'Accepted',
-      type: 'Installation',
-      subject: 'Upgrade to higher speed plan',
-      date: new Date().toISOString(),
-
-    },
-    {
-      id: 'KAZ-1106',
-      clientName: 'Lisa Thompson',
-      status: 'Closed',
-      type: 'Installation',
-      subject: 'New modem installation completed',
-      date: '2024-01-10T13:30:00',
-
-    }
-  ];
-
-  const getStatusConfig = (status: TicketItem['status']) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'Open':
-        return {
-          color: '#3498DB',
-          text: 'Just received',
-          bgColor: '#EBF5FB'
-        };
-      case 'Pending':
-        return {
-          color: '#F39C12',
-          text: 'Being worked on',
-          bgColor: '#FEF5E7'
-        };
-      case 'Accepted':
-        return {
-          color: '#95A5A6',
-          text: 'Awaiting response',
-          bgColor: '#F4F6F6'
-        };
-      case 'Completed':
-        return {
-          color: '#27AE60',
-          text: 'Successfully resolved',
-          bgColor: '#EAFAF1'
-        };
-      case 'Closed':
-        return {
-          color: '#7F8C8D',
-          text: 'Ticket closed',
-          bgColor: '#F2F4F4'
-        };
+      case 'open':
+        return { color: '#3498DB', text: 'Just received', bgColor: '#EBF5FB' };
+      case 'pending':
+        return { color: '#F39C12', text: 'Awaiting action', bgColor: '#FEF5E7' };
+      case 'accepted':
+        return { color: '#8E44AD', text: 'Accepted', bgColor: '#F4ECF7' };
+      case 'in progress':
+        return { color: '#E67E22', text: 'Being worked on', bgColor: '#FDF2E9' };
+      case 'completed':
+        return { color: '#27AE60', text: 'Successfully resolved', bgColor: '#EAFAF1' };
+      case 'closed':
+        return { color: '#7F8C8D', text: 'Ticket closed', bgColor: '#F2F4F4' };
       default:
-        return {
-          color: '#000',
-          text: '',
-          bgColor: '#FFF'
-        };
+        return { color: '#000', text: '', bgColor: '#FFF' };
     }
   };
 
-  const getTypeEmoji = (type: TicketItem['type']) => {
-    switch (type) {
-      case 'Repair': return '';
-      case 'Installation': return '';
-      default: return '';
-    }
+  const filtered = search
+    ? tickets.filter(ticket => {
+        const q = search.toLowerCase();
+        return (
+          (ticket.client?.name || '').toLowerCase().includes(q) ||
+          (ticket.subject || '').toLowerCase().includes(q) ||
+          (ticket.ticket_number || '').toLowerCase().includes(q)
+        );
+      })
+    : tickets;
+
+  const renderTicket = ({ item: ticket }: { item: TicketItem }) => {
+    const statusConfig = getStatusConfig(ticket.status);
+
+    return (
+      <TouchableOpacity
+        style={[styles.ticketCard, { backgroundColor: statusConfig.bgColor }]}
+        onPress={() => router.push(`/tickets/${ticket.id}`)}
+      >
+        <View style={styles.ticketHeader}>
+          <View style={styles.ticketIdRow}>
+            <Text style={styles.ticketId}>{ticket.client?.name || 'Unknown'}</Text>
+            <Text style={styles.timeText}>{getTime(ticket.created_at)}</Text>
+          </View>
+          <View style={styles.dateTimeContainer}>
+            <Text style={styles.dateText}>{formatDate(ticket.created_at)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.statusRow}>
+          <View style={[styles.statusBadge, { backgroundColor: statusConfig.color }]}>
+            <Text style={styles.statusText}>{ticket.status}</Text>
+          </View>
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeText}>{ticket.type || 'N/A'}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.statusDescription}>{statusConfig.text}</Text>
+
+        {ticket.subject ? (
+          <View style={styles.subjectContainer}>
+            <Text style={styles.subjectLabel}>Issue:</Text>
+            <Text style={styles.subjectText} numberOfLines={2}>{ticket.subject}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
   };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#00afa1" />
+        <Text style={styles.footerText}>Loading more...</Text>
+      </View>
+    );
+  };
+
+  const renderHeader = () => (
+    <View>
+      {/* Title bar */}
+      <View style={styles.titleSection}>
+        <View style={styles.titleRow}>
+          <Text style={styles.mainTitle}>Tickets</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity onPress={onRefresh} disabled={refreshing} style={styles.iconButton}>
+              {refreshing ? (
+                <ActivityIndicator size="small" color="#00afa1" />
+              ) : (
+                <Ionicons name="refresh" size={20} color="#00afa1" />
+              )}
+            </TouchableOpacity>
+
+            {searchVisible ? (
+              <View style={styles.inlineSearch}>
+                <Ionicons name="search-outline" size={16} color="#888" />
+                <TextInput
+                  style={styles.inlineInput}
+                  placeholder="Search..."
+                  value={search}
+                  onChangeText={setSearch}
+                  autoFocus
+                />
+                <TouchableOpacity onPress={() => { setSearch(''); setSearchVisible(false); }}>
+                  <Ionicons name="close" size={16} color="#888" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.iconButton} onPress={() => setSearchVisible(true)}>
+                <Ionicons name="search-outline" size={22} color="#00afa1" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Status filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
+        {STATUS_FILTERS.map((f) => {
+          const active = statusFilter === f.value;
+          return (
+            <TouchableOpacity
+              key={f.value}
+              style={[
+                styles.filterChip,
+                active && { backgroundColor: f.color || '#00afa1', borderColor: f.color || '#00afa1' },
+              ]}
+              onPress={() => applyStatusFilter(f.value)}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Type filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
+        {TYPE_FILTERS.map((f) => {
+          const active = typeFilter === f.value;
+          return (
+            <TouchableOpacity
+              key={f.value}
+              style={[
+                styles.filterChip,
+                active && styles.filterChipActive,
+              ]}
+              onPress={() => applyTypeFilter(f.value)}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#00afa1" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Header />
-      <View style={styles.contentContainer}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={true}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.titleSection}>
-            <View style={styles.titleRow}>
-              <Text style={styles.mainTitle}>Tickets</Text>
-
-              {searchVisible ? (
-                <View style={styles.inlineSearch}>
-                  <Ionicons name="search-outline" size={16} color="#888" />
-
-                  <TextInput
-                    style={styles.inlineInput}
-                    placeholder="Search..."
-                    value={search}
-                    onChangeText={setSearch}
-                    autoFocus
-                  />
-
-                  <TouchableOpacity onPress={() => {
-                    setSearch('');
-                    setSearchVisible(false);
-                  }}>
-                   
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.searchButton}
-                  onPress={() => setSearchVisible(true)}
-                >
-                  <Ionicons name="search-outline" size={22} color="#00afa1" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-
-
-
-          <View style={styles.sectionContainer}>
-
-            {tickets
-              .filter(ticket =>
-                ticket.clientName.toLowerCase().includes(search.toLowerCase()) ||
-                ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
-                ticket.id.toLowerCase().includes(search.toLowerCase())
-              )
-              .map((ticket) => {
-
-                const statusConfig = getStatusConfig(ticket.status);
-
-
-                return (
-                  <TouchableOpacity
-                    key={ticket.id}
-                    style={[styles.ticketCard, { backgroundColor: statusConfig.bgColor }]}
-                    onPress={() => router.push(`/tickets/${ticket.id}`)}
-                  >
-                    <View style={styles.ticketHeader}>
-                      <View style={styles.ticketIdRow}>
-                        <Text style={styles.ticketId}>{ticket.clientName}</Text>
-                        <Text style={styles.timeText}>
-                          {getTime(ticket.date)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dateTimeContainer}>
-                        <Text style={styles.dateText}>
-                          {formatDate(ticket.date)}
-                        </Text>
-
-                      </View>
-                    </View>
-
-                    <View style={styles.clientRow}>
-
-                    </View>
-
-                    <View style={styles.statusRow}>
-                      <View style={styles.statusContainer}>
-                        <View style={[styles.statusBadge, { backgroundColor: statusConfig.color }]}>
-                          <Text style={styles.statusText}>{ticket.status}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.typeBadge}>
-                        <Text style={styles.typeEmoji}>{getTypeEmoji(ticket.type)}</Text>
-                        <Text style={styles.typeText}>{ticket.type}</Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.statusDescription}>
-                      {statusConfig.text}
-                    </Text>
-
-                    <View style={styles.subjectContainer}>
-                      <Text style={styles.subjectLabel}>Issue:</Text>
-                      <Text style={styles.subjectText} numberOfLines={2}>
-                        {ticket.subject}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-          </View>
-        </ScrollView>
-      </View>
+      <FlatList
+        data={filtered}
+        renderItem={renderTicket}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={<Text style={styles.emptyText}>No tickets found</Text>}
+        contentContainerStyle={styles.listContent}
+        onEndReached={search ? undefined : onEndReached}
+        onEndReachedThreshold={0.3}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 30,
+  },
+  titleSection: {
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
   },
-
-  searchButton: {
+  mainTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  iconButton: {
     padding: 6,
   },
-
-  searchContainer: {
-    marginTop: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    width: '100%',
-  },
-
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 15,
-    color: '#333',
-  },
-
   inlineSearch: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,102 +375,44 @@ const styles = StyleSheet.create({
     height: 36,
     width: 180,
   },
-
   inlineInput: {
     flex: 1,
     marginHorizontal: 6,
     fontSize: 14,
     color: '#333',
   },
-
-
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  titleSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 15,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#252222ff',
-  },
-  mainTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 5,
-  },
-  subTitle: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 30,
-  },
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  headerContainer: {
+  // Filter chips
+  filterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    marginTop: 16,
+    paddingVertical: 10,
+    gap: 8,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  newTicketButton: {
-    backgroundColor: '#00afa1',
+  filterChip: {
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  newTicketText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#ddd',
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#00afa1',
-    marginBottom: 4,
+  filterChipActive: {
+    backgroundColor: '#00afa1',
+    borderColor: '#00afa1',
   },
-  statLabel: {
-    fontSize: 12,
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#666',
-    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  filterChipTextActive: {
+    color: '#fff',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#A0AEC0',
+    textAlign: 'center',
+    paddingVertical: 40,
   },
   ticketCard: {
     borderRadius: 12,
@@ -411,10 +421,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e8e8e8',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
@@ -433,25 +440,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#00afa1',
   },
-  priorityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  priorityDot: {
-    fontSize: 8,
-    marginRight: 4,
-  },
-  priorityText: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
   dateTimeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -466,37 +454,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  clientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  divider: {
+    height: 1,
+    backgroundColor: '#e8e8e8',
     marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e8e8e8',
-  },
-  clientLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 8,
-  },
-  clientName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
   },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusEmoji: {
-    fontSize: 18,
-    marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -507,6 +474,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',
+    textTransform: 'capitalize',
   },
   typeBadge: {
     flexDirection: 'row',
@@ -518,14 +486,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  typeEmoji: {
-    fontSize: 14,
-    marginRight: 6,
-  },
   typeText: {
     fontSize: 13,
     color: '#333',
     fontWeight: '500',
+    textTransform: 'capitalize',
   },
   statusDescription: {
     fontSize: 13,
@@ -548,6 +513,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
+  },
+  footerLoader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 8,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#A0AEC0',
   },
 });
 

@@ -1,3 +1,4 @@
+import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
 import { getUser } from "@/scripts/user";
 import { Fontisto, Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -190,7 +191,7 @@ export default function TimeInScreen() {
     try {
       const token = await getToken();
       const res = await fetch(
-        `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/time_out`,
+        API.tech.timeOut(),
         {
           method: "POST",
           headers: {

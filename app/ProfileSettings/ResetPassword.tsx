@@ -1,3 +1,4 @@
+import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -49,7 +50,7 @@ const ResetPassword = () => {
     setIsLoading(true);
 
     try {
-      const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/profile/update/password`;
+      const url = API.tech.updatePassword();
       const token = await getToken();
 
       const body = {

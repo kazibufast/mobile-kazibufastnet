@@ -1,20 +1,88 @@
+import { showToast } from '@/components/Toast';
+import {
+  API_ENVIRONMENTS,
+  getApiBaseUrl,
+  getCurrentEnvironment,
+  setApiBaseUrl,
+} from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { setToken } from '../../scripts/token';
-import { getUser } from '../../scripts/user';
+import { getUser, setUser } from '../../scripts/user';
 
 const Profile: React.FC = () => {
   const router = useRouter();
   const user = getUser();
-  
 
-  const handleLogout = () => {
+  const [envModalVisible, setEnvModalVisible] = useState(false);
+  const [currentEnv, setCurrentEnv] = useState(getCurrentEnvironment());
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleLogout = async () => {
     setToken(null);
-    router.push("/mpin-login");
+    setUser(null);
+    await AsyncStorage.multiRemove(['token', 'user']);
+    router.replace('/(auth)/login');
   };
 
+  const handleLogoTap = () => {
+    tapCount.current += 1;
+
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+
+    if (tapCount.current >= 10) {
+      tapCount.current = 0;
+      setCurrentEnv(getCurrentEnvironment());
+      setEnvModalVisible(true);
+      return;
+    }
+
+    // Reset after 2 seconds of inactivity
+    tapTimer.current = setTimeout(() => {
+      tapCount.current = 0;
+    }, 2000);
+  };
+
+  const switchEnvironment = async (url: string) => {
+    await setApiBaseUrl(url);
+    setCurrentEnv(getCurrentEnvironment());
+    setEnvModalVisible(false);
+
+    // Clear session since the backend changed
+    setToken(null);
+    setUser(null);
+    await AsyncStorage.multiRemove(['token', 'user']);
+
+    showToast(`Switched to ${getCurrentEnvironment()}. Please log in again.`, 'info');
+    router.replace('/(auth)/login');
+  };
+
+  const envOptions = [
+    {
+      label: 'Development',
+      sublabel: API_ENVIRONMENTS.development,
+      url: API_ENVIRONMENTS.development,
+      color: '#F39C12',
+    },
+    {
+      label: 'Production',
+      sublabel: API_ENVIRONMENTS.production,
+      url: API_ENVIRONMENTS.production,
+      color: '#27AE60',
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -25,15 +93,19 @@ const Profile: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={handleLogoTap}
+              activeOpacity={0.8}
+            >
               <Image
                 source={require('../../assets/images/kazi.png')}
                 style={styles.avatar}
                 resizeMode="cover"
               />
-            </View>
-            <Text style={styles.userName}> {user?.name || 'Guest'}</Text>
-            <Text style={styles.userEmail}>{user?.mobile_number || '+63 912 3456 789'}</Text>
+            </TouchableOpacity>
+            <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+            <Text style={styles.userEmail}>{user?.mobile_number || ''}</Text>
           </View>
 
           <View style={styles.sectionContainer}>
@@ -97,6 +169,7 @@ const Profile: React.FC = () => {
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
           </View>
+
           <TouchableOpacity
             style={styles.logoutButton}
             onPress={handleLogout}
@@ -104,10 +177,64 @@ const Profile: React.FC = () => {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         </ScrollView>
-
-
       </View>
 
+      {/* Environment Switcher Modal */}
+      <Modal
+        visible={envModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEnvModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="code-slash" size={24} color="#00afa1" />
+              <Text style={styles.modalTitle}>Developer Options</Text>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Current: <Text style={{ fontWeight: '700' }}>{currentEnv}</Text>
+            </Text>
+            <Text style={styles.modalUrl}>{getApiBaseUrl()}</Text>
+
+            <View style={styles.envOptions}>
+              {envOptions.map((opt) => {
+                const isActive = getApiBaseUrl() === opt.url;
+                return (
+                  <TouchableOpacity
+                    key={opt.url}
+                    style={[
+                      styles.envOption,
+                      isActive && { borderColor: opt.color, backgroundColor: opt.color + '10' },
+                    ]}
+                    onPress={() => !isActive && switchEnvironment(opt.url)}
+                    disabled={isActive}
+                  >
+                    <View style={styles.envOptionHeader}>
+                      <View style={[styles.envDot, { backgroundColor: opt.color }]} />
+                      <Text style={[styles.envLabel, isActive && { color: opt.color }]}>
+                        {opt.label}
+                      </Text>
+                      {isActive && (
+                        <Ionicons name="checkmark-circle" size={18} color={opt.color} />
+                      )}
+                    </View>
+                    <Text style={styles.envUrl}>{opt.sublabel}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setEnvModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -123,11 +250,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-
   scrollContent: {
     paddingBottom: 30,
   },
-
   profileHeader: {
     alignItems: 'center',
     paddingVertical: 50,
@@ -222,6 +347,92 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  modalUrl: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: 'monospace',
+    marginBottom: 20,
+  },
+  envOptions: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  envOption: {
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 16,
+  },
+  envOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  envDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  envLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  envUrl: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: 'monospace',
+    marginLeft: 18,
+  },
+  modalClose: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
   },
 });
 

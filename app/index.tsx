@@ -1,3 +1,4 @@
+import { API } from "@/constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -91,7 +92,7 @@ export default function LoginScreen() {
       );
     }, 1500);
 
-    await fetch("https://staging.kazibufastnet.com/api/verify_number", {
+    await fetch(API.verifyNumber, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mobile_number: "+63" + cleanPhone }),
@@ -106,7 +107,7 @@ export default function LoginScreen() {
     try {
       setOtpLoading(true);
       const response = await fetch(
-        "https://staging.kazibufastnet.com/api/otp",
+        API.otp,
         {
           method: "POST",
           headers: {
@@ -154,7 +155,7 @@ export default function LoginScreen() {
 
       // Call API to resend OTP
       const response = await fetch(
-        "https://staging.kazibufastnet.com/api/verify_number",
+        API.verifyNumber,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

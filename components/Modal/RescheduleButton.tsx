@@ -1,3 +1,5 @@
+import { API } from '@/constants/api';
+import { showToast } from '@/components/Toast';
 import { getToken } from '@/scripts/token';
 import { getUser } from '@/scripts/user';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -31,7 +33,7 @@ const RescheduleButton: React.FC<RescheduleButtonProps> = ({ onConfirm, style })
 
   // Handle reschedule
   const handleReschedule = async (date: string, notes: string) => {
-    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/reschedule/${id}`;
+    const url = API.tech.rescheduleTicket(id);
 
     try {
       const token = await getToken();
@@ -48,21 +50,19 @@ const RescheduleButton: React.FC<RescheduleButtonProps> = ({ onConfirm, style })
         }),
       });
 
-      // Check the response status
-      if (response.ok) {
-        const responseData = await response.json();
-        alert('Reschedule successful!');
+      const data = await response.json();
 
-        router.push('/(tech-tabs)/tickets');  
-
-        setRescheduleComment('');
-        setModalVisible(false); 
-      } else {
-        const errorData = await response.json();
-        alert('Error rescheduling!');
-        // Handle error (show error message, etc.)
+      if (!response.ok) {
+        showToast(data.message || 'Error rescheduling', 'error');
+        return;
       }
+
+      showToast('Ticket rescheduled successfully', 'success');
+      router.push('/(tech-tabs)/tickets');
+      setRescheduleComment('');
+      setModalVisible(false);
     } catch (error) {
+      showToast('Network error. Please try again.', 'error');
     }
   };
 

@@ -1,3 +1,4 @@
+import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
 import { getUser } from "@/scripts/user";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -69,7 +70,7 @@ export default function TicketDetails() {
   const fetchTicketDetails = useCallback(async () => {
     const ticketId = Array.isArray(id) ? id[0] : id;
 
-    if (!ticketId || !user?.branch?.subdomain) return;
+    if (!ticketId) return;
 
     setRefreshing(true);
 
@@ -77,7 +78,7 @@ export default function TicketDetails() {
       const token = await getToken();
 
       const response = await fetch(
-        `https://${user.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/view/${ticketId}`,
+        API.tech.viewTicket(ticketId),
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -114,9 +115,9 @@ export default function TicketDetails() {
         latitude: t.subscription?.latitude ?? null,
         longitude: t.subscription?.longitude ?? null,
 
-        tagNumber: t.subscription?.job_order.span_no ?? "N/A",
-        pppoeName: t.subscription?.job_order.pppoe_name ?? "N/A",
-        pppoePassword: t.subscription?.job_order.pppoe_password ?? "N/A",
+        tagNumber: t.subscription?.job_order?.span_no ?? "N/A",
+        pppoeName: t.subscription?.job_order?.pppoe_name ?? "N/A",
+        pppoePassword: t.subscription?.job_order?.pppoe_password ?? "N/A",
       });
     } catch (error) {
       Alert.alert("Notice", "Ticket not available", [
@@ -319,10 +320,7 @@ export default function TicketDetails() {
               key={`${refreshing}`}
               source={{
                 uri:
-                  `https://${user.branch.subdomain}.kazibufastnet.com/client/map/` +
-                  ticket.latitude +
-                  "/" +
-                  ticket.longitude,
+                  API.tech.clientMap(ticket.latitude, ticket.longitude),
               }}
               style={styles.webview}
             />

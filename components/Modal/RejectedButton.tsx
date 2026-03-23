@@ -1,3 +1,5 @@
+import { API } from '@/constants/api';
+import { showToast } from '@/components/Toast';
 import { getToken } from '@/scripts/token';
 import { getUser } from '@/scripts/user';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -23,7 +25,7 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
   const user = getUser();
 
   const handleReject = async (notes: string) => {
-    const url = `https://${user?.branch.subdomain}.kazibufastnet.com/api/app/tech/tickets/reject/${id}`;
+    const url = API.tech.rejectTicket(id);
 
     try {
       const token = await getToken();
@@ -39,24 +41,19 @@ const RejectedButton: React.FC<RejectedButtonProps> = ({ onReject, style }) => {
         }),
       });
 
-      // Check the response status
-      if (response.ok) {
-        const responseData = await response.json();
-        alert('Rejection successful!');
+      const data = await response.json();
 
-        // Redirect to tickets page after rejection
-        router.push('/(tech-tabs)/tickets');
-
-        setComment('');
-        setModalVisible(false);
-      } else {
-        const errorData = await response.json();
-        alert('Error rejecting ticket!');
-        // Optionally show an error message to the user
+      if (!response.ok) {
+        showToast(data.message || 'Error rejecting ticket', 'error');
+        return;
       }
+
+      showToast('Ticket rejected successfully', 'success');
+      router.push('/(tech-tabs)/tickets');
+      setComment('');
+      setModalVisible(false);
     } catch (error) {
-      
-      // Optionally show an error message to the user
+      showToast('Network error. Please try again.', 'error');
     }
   };
 

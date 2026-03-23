@@ -1,3 +1,4 @@
+import { API } from "@/constants/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import React, { useRef, useState } from "react";
@@ -109,7 +110,7 @@ export default function SetupPinScreen() {
   try {
     setLoading(true);
 
-    const response = await fetch("https://staging.kazibufastnet.com/api/setup_pin", {
+    const response = await fetch(API.setupPin, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

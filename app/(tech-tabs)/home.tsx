@@ -1,20 +1,24 @@
+import { API } from '@/constants/api';
+import { getToken } from '@/scripts/token';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Animated,
+  ActivityIndicator,
   Dimensions,
   Platform,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import { getUser } from '../../scripts/user';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const scaleSize = (size: number) => {
   const baseWidth = 375;
@@ -22,49 +26,89 @@ const scaleSize = (size: number) => {
   return Math.round(size * Math.min(scale, 1.2));
 };
 
+interface Stats {
+  open: number;
+  pending: number;
+  accepted: number;
+  in_progress: number;
+  completed: number;
+  closed: number;
+}
+
+interface RecentTicket {
+  id: number;
+  ticket_number: string;
+  subject: string;
+  status: string;
+  type: string;
+  created_at: string;
+  client?: { name: string };
+}
+
 const Home: React.FC = () => {
   const router = useRouter();
-  const [scrollY] = useState(new Animated.Value(0));
   const user = getUser();
 
-  const stats = {
-    activeTickets: 8,
-    completed: 12,
-    pending: 3,
-    closed: 4
-  };
+  const [stats, setStats] = useState<Stats>({ open: 0, pending: 0, accepted: 0, in_progress: 0, completed: 0, closed: 0 });
+  const [recentTickets, setRecentTickets] = useState<RecentTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const recentTickets = [
-    { id: 'KAZ-2021', client: 'John Doe', status: 'In Progress', priority: 'High', time: '10:30 AM' },
-    { id: 'KAZ-2022', client: 'Sarah Smith', status: 'Assigned', priority: 'Medium', time: '11:15 AM' },
-    { id: 'KAZ-2023', client: 'Mike Johnson', status: 'Completed', priority: 'Low', time: '9:00 AM' },
-    { id: 'KAZ-2024', client: 'Lisa Wang', status: 'Pending', priority: 'High', time: '2:45 PM' },
-  ];
+  const fetchHome = useCallback(async () => {
+    try {
+      const token = await getToken();
+      const response = await fetch(API.tech.home(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      setStats(data.stats);
+      setRecentTickets(data.recent_tickets || []);
+    } catch {} finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchHome(); }, [fetchHome]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchHome();
+  }, [fetchHome]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Progress': return '#F39C12';
-      case 'Assigned': return '#3498DB';
-      case 'Completed': return '#2ECC71';
-      case 'Pending': return '#95A5A6';
+      case 'in progress': return '#F39C12';
+      case 'accepted': return '#3498DB';
+      case 'completed': return '#2ECC71';
+      case 'pending': return '#95A5A6';
+      case 'open': return '#E74C3C';
+      case 'closed': return '#7F8C8D';
       default: return '#7F8C8D';
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'High': return { color: '#E74C3C', bg: '#FDEDEC' };
-      case 'Medium': return { color: '#F39C12', bg: '#FEF9E7' };
-      case 'Low': return { color: '#27AE60', bg: '#EAFAF1' };
-      default: return { color: '#7F8C8D', bg: '#F4F6F6' };
-    }
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#00A8FF" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -73,64 +117,71 @@ const Home: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" colors={['#00A8FF']} />
+        }
       >
         <View style={styles.heroSection}>
           <View style={styles.greetingContainer}>
             <Text style={styles.greeting}>
-              Hi, {user?.name?.split(' ')[0] || 'Technician'}! 👋
+              Hi, {user?.name?.split(' ')[0] || 'Technician'}!
             </Text>
-            <Text style={styles.welcome}>
-              Welcome Technician
-            </Text>
-
+            <Text style={styles.welcome}>Welcome Technician</Text>
           </View>
         </View>
 
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <TouchableOpacity onPress={onRefresh} disabled={refreshing} style={styles.refreshButton}>
+              {refreshing ? (
+                <ActivityIndicator size="small" color="#00A8FF" />
+              ) : (
+                <Ionicons name="refresh" size={20} color="#00A8FF" />
+              )}
+            </TouchableOpacity>
+          </View>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.activeTickets}</Text>
-              <Text style={styles.statLabel}>Open Tickets</Text>
+              <Text style={styles.statNumber}>{stats.open}</Text>
+              <Text style={styles.statLabel}>Open</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.pending}</Text>
-              <Text style={styles.statLabel}>Pending Tickets</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.in_progress}</Text>
+              <Text style={styles.statLabel}>In Progress</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.completed}</Text>
-              <Text style={styles.statLabel}>Completed Tickets</Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.closed}</Text>
-              <Text style={styles.statLabel}>Closed Tickets</Text>
+              <Text style={styles.statLabel}>Completed</Text>
             </View>
           </View>
         </View>
 
-
         <View style={styles.ticketsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recently Open</Text>
-            <TouchableOpacity onPress={() => router.push('/tickets')}>
-              <Text style={styles.viewAll}>See All →</Text>
+            <Text style={styles.sectionTitle}>Recent Tickets</Text>
+            <TouchableOpacity onPress={() => router.push('/(tech-tabs)/tickets')}>
+              <Text style={styles.viewAll}>See All</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.ticketsList}>
-            {recentTickets.map((ticket, index) => {
-              const priorityStyle = getPriorityBadge(ticket.priority);
-              return (
+            {recentTickets.length === 0 ? (
+              <Text style={styles.emptyText}>No active tickets</Text>
+            ) : (
+              recentTickets.map((ticket) => (
                 <TouchableOpacity
-                  key={index}
+                  key={ticket.id}
                   style={styles.ticketCard}
                   onPress={() => router.push(`/tickets/${ticket.id}`)}
                 >
                   <View style={styles.ticketHeader}>
-                    <Text style={styles.ticketId}>{ticket.client}</Text>
-                    <Text style={styles.ticketTime}>{ticket.time}</Text>
+                    <Text style={styles.ticketClient}>{ticket.client?.name || 'Unknown'}</Text>
+                    <Text style={styles.ticketTime}>{formatTime(ticket.created_at)}</Text>
                   </View>
-                 
                   <View style={styles.ticketFooter}>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(ticket.status) + '20' }]}>
                       <View style={[styles.statusDot, { backgroundColor: getStatusColor(ticket.status) }]} />
@@ -138,11 +189,10 @@ const Home: React.FC = () => {
                         {ticket.status}
                       </Text>
                     </View>
-                   
                   </View>
                 </TouchableOpacity>
-              );
-            })}
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -186,26 +236,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: scaleSize(8),
   },
-  userInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: scaleSize(10),
-  },
-  userRole: {
-    fontSize: scaleSize(14),
-    color: '#718096',
-    backgroundColor: '#EDF2F7',
-    paddingHorizontal: scaleSize(12),
-    paddingVertical: scaleSize(6),
-    borderRadius: 20,
-    fontWeight: '500',
-  },
-  userId: {
-    fontSize: scaleSize(13),
-    color: '#A0AEC0',
-    fontWeight: '500',
-  },
   statsSection: {
     paddingHorizontal: scaleSize(20),
     marginBottom: scaleSize(25),
@@ -235,10 +265,6 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginBottom: scaleSize(12),
   },
-  statIcon: {
-    fontSize: scaleSize(24),
-    marginBottom: scaleSize(8),
-  },
   statNumber: {
     fontSize: scaleSize(28),
     fontWeight: '800',
@@ -250,7 +276,7 @@ const styles = StyleSheet.create({
     color: '#718096',
     fontWeight: '500',
   },
-  actionsSection: {
+  ticketsSection: {
     paddingHorizontal: scaleSize(20),
     marginBottom: scaleSize(25),
   },
@@ -265,49 +291,8 @@ const styles = StyleSheet.create({
     color: '#00A8FF',
     fontWeight: '600',
   },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: scaleSize(12),
-  },
-  actionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: scaleSize(16),
-    width: '48%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: scaleSize(12),
-  },
-  actionIcon: {
-    width: scaleSize(48),
-    height: scaleSize(48),
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleSize(12),
-  },
-  actionIconText: {
-    fontSize: scaleSize(24),
-  },
-  actionTitle: {
-    fontSize: scaleSize(16),
-    fontWeight: '700',
-    color: '#2D3748',
-    marginBottom: scaleSize(4),
-  },
-  actionDescription: {
-    fontSize: scaleSize(12),
-    color: '#718096',
-    lineHeight: scaleSize(16),
-  },
-  ticketsSection: {
-    paddingHorizontal: scaleSize(20),
-    marginBottom: scaleSize(25),
+  refreshButton: {
+    padding: 8,
   },
   ticketsList: {
     gap: scaleSize(12),
@@ -328,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: scaleSize(8),
   },
-  ticketId: {
+  ticketClient: {
     fontSize: scaleSize(16),
     fontWeight: '700',
     color: '#00A8FF',
@@ -337,12 +322,6 @@ const styles = StyleSheet.create({
     fontSize: scaleSize(12),
     color: '#A0AEC0',
     fontWeight: '500',
-  },
-  ticketClient: {
-    fontSize: scaleSize(15),
-    color: '#4A5568',
-    fontWeight: '600',
-    marginBottom: scaleSize(12),
   },
   ticketFooter: {
     flexDirection: 'row',
@@ -365,41 +344,14 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: scaleSize(12),
     fontWeight: '600',
+    textTransform: 'capitalize',
   },
-  priorityBadge: {
-    paddingHorizontal: scaleSize(10),
-    paddingVertical: scaleSize(4),
-    borderRadius: 12,
+  emptyText: {
+    fontSize: scaleSize(14),
+    color: '#A0AEC0',
+    textAlign: 'center',
+    paddingVertical: 30,
   },
-  priorityText: {
-    fontSize: scaleSize(11),
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  performanceBanner: {
-    marginHorizontal: scaleSize(20),
-    marginBottom: scaleSize(25),
-    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    borderRadius: 20,
-    padding: scaleSize(20),
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  bannerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bannerTitle: {
-    fontSize: scaleSize(18),
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: scaleSize(6),
-  },
- 
 });
 
 export default Home;

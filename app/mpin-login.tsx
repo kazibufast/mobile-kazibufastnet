@@ -1,3 +1,4 @@
+import { API } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -57,7 +58,7 @@ export default function MpinLoginScreen() {
     try {
         console.log("Sending login request:", { mobile_number, mpin });
 
-        const response = await fetch("https://staging.kazibufastnet.com/api/login", {
+        const response = await fetch(API.login, {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ mobile_number, pin }),
@@ -74,7 +75,7 @@ export default function MpinLoginScreen() {
             data = { status: "error", message: text };
         }
 
-        if (data.status === "success" && data.token) {
+        if (response.ok && data.token) {
             setToken(data.token);
             setUser(data.user);
 
@@ -82,11 +83,8 @@ export default function MpinLoginScreen() {
             await AsyncStorage.setItem('authToken', data.token);
             await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
-            router.push(
-                data.user.user_type.toLowerCase() === "technician"
-                    ? "/(tech-tabs)/home"
-                    : "/(tabs)/home"
-            );
+            // Client login always goes to client tabs
+            router.push("/(tabs)/home");
         } else {
             setMessage(data.message || "Incorrect MPIN");
             triggerShakeAnimation();

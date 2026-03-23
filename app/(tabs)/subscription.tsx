@@ -1,3 +1,4 @@
+import { API } from '@/constants/api';
 import React, { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Header from '../../components/Header';
@@ -37,7 +38,7 @@ const SubscriptionScreen: React.FC = () => {
         try {
             const token = getToken();
 
-            const response = await fetch('https://staging.kazibufastnet.com/api/subscriptions/1000', {
+            const response = await fetch(API.subscriptions, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
