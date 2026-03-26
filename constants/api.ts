@@ -13,7 +13,7 @@ export const API_ENVIRONMENTS = {
 } as const;
 
 const STORAGE_KEY = "api_base_url";
-const DEFAULT_URL = API_ENVIRONMENTS.development;
+const DEFAULT_URL = API_ENVIRONMENTS.production;
 
 // In-memory cache so we don't hit AsyncStorage on every API call
 let _baseUrl: string = DEFAULT_URL;
@@ -83,6 +83,10 @@ export const API = {
       `${getApiBaseUrl()}/api/app/tech/tickets/${ticketId}/reschedule`,
     updatePassword: () =>
       `${getApiBaseUrl()}/api/app/tech/profile/update-password`,
+    naps: () => `${getApiBaseUrl()}/api/app/tech/naps`,
+    storeNap: () => `${getApiBaseUrl()}/api/app/tech/naps`,
+    napTags: (napId: number | string) =>
+      `${getApiBaseUrl()}/api/app/tech/naps/${napId}/tags`,
     clientMap: (lat: string, lon: string) =>
       `${getApiBaseUrl()}/client/map/${lat}/${lon}`,
   },

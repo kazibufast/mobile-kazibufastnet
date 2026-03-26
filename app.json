@@ -8,7 +8,6 @@
     "scheme": "kazi",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kazibufast.kazi",
@@ -30,22 +29,26 @@
           "twitter",
           "twitterauth"
         ],
-        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication"
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication",
+        "NSCameraUsageDescription": "This app uses the camera to scan NAP QR codes",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show distance to NAP boxes"
       }
     },
-    
     "android": {
       "package": "com.yourcompany.kazi",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/kazi.png"
-       
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGesture": false,
       "permissions": [
         "android.permission.CALL_PHONE",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ],
       "intentFilters": [
         {
@@ -65,12 +68,10 @@
         }
       ]
     },
-    
     "web": {
       "output": "static",
       "favicon": "./assets/images/kazi.png"
     },
-    
     "plugins": [
       "expo-router",
       [
@@ -84,12 +85,20 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-camera",
+      "expo-location"
     ],
-    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3be65bf0-8f98-49d3-be73-11177d81eef6"
+      }
+    },
+    "owner": "fingersandmind"
   }
 }

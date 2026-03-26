@@ -400,6 +400,11 @@ export default function TechLoginScreen() {
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity onPress={() => router.replace("/")} style={styles.backToClient}>
+                        <Ionicons name="arrow-back" size={16} color="#00afa1" />
+                        <Text style={styles.backToClientText}>Back to Client Login</Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
 
@@ -701,5 +706,18 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: "#666",
+    },
+    backToClient: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        marginTop: 24,
+        paddingVertical: 12,
+    },
+    backToClientText: {
+        color: "#00afa1",
+        fontSize: 14,
+        fontWeight: "600",
     },
 });

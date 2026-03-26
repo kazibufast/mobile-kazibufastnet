@@ -1,19 +1,21 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 
 interface Props {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  style?: StyleProp<ViewStyle>;
 }
 
 const TicketButton: React.FC<Props> = ({
   label,
   onPress,
   variant = 'primary',
+  style,
 }) => {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.button, styles[variant]]}>
+    <TouchableOpacity onPress={onPress} style={[styles.button, styles[variant], style]}>
       <Text style={styles.text}>{label}</Text>
     </TouchableOpacity>
   );
@@ -21,11 +23,10 @@ const TicketButton: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   button: {
-    flex: 1,                    
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 0,           
+    justifyContent: 'center',
   },
   primary: { backgroundColor: '#3498DB' },
   secondary: { backgroundColor: '#F39C12' },

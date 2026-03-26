@@ -397,6 +397,13 @@ export default function LoginScreen() {
                 <Text style={styles.signInButtonText}>Sign In</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.techLoginButton}
+              onPress={() => router.push("/(auth)/login")}
+            >
+              <Text style={styles.techLoginText}>Login as Technician</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -604,5 +611,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textDecorationLine: "underline",
+  },
+  techLoginButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#00afa1",
+  },
+  techLoginText: {
+    color: "#00afa1",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

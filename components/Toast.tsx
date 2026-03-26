@@ -48,7 +48,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const isDev = getApiBaseUrl() !== API_ENVIRONMENTS.production;
+  const [isDev, setIsDev] = useState(getApiBaseUrl() !== API_ENVIRONMENTS.production);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsDev(getApiBaseUrl() !== API_ENVIRONMENTS.production);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>

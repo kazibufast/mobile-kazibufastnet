@@ -32,7 +32,8 @@ export default function RootLayout() {
 
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tech-tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="tickets/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="tickets" options={{ headerShown: false }} />
+          <Stack.Screen name="naps" options={{ headerShown: false }} />
 
           <Stack.Screen name="ProfileSettings/AccountSettings" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/PrivacySecurity" options={{ headerShown: false }} />
