@@ -60,11 +60,12 @@ interface TicketItem {
   pictureCause: string;
   pictureReading: string;
   branch: string;
+  branch_id: number | null;
 }
 
 /* ---------------- COMPONENT ---------------- */
 
-const TicketActionButtons: React.FC = () => {
+const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: number | null }> = ({ onStatusChange, napId: napIdProp }) => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [status, setStatus] = useState<TicketStatus>("pending");
   const [ticket, setTicket] = useState<TicketItem | null>(null);
@@ -74,7 +75,7 @@ const TicketActionButtons: React.FC = () => {
   const [macAddress, setMacAddress] = useState("");
   const [pppoeName, setPppoeName] = useState("");
   const [lcpNumber, setLcpNumber] = useState("");
-  const [napNumber, setNapNumber] = useState("");
+  // napId comes from prop (set by ticket details page)
   const [portNumber, setPortNumber] = useState("");
   const [tagNumber, setTagNumber] = useState("");
   const [connectionType, setConnectionType] = useState("");
@@ -93,9 +94,11 @@ const TicketActionButtons: React.FC = () => {
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string>("");
   const [modalImageTitle, setModalImageTitle] = useState<string>("");
+
   const user = getUser();
 
   const STORAGE_KEY = `ticket-draft-${id}`;
+
   /* ---------------- FETCH TICKET ---------------- */
 
   const fetchTicket = async () => {
@@ -141,6 +144,7 @@ const TicketActionButtons: React.FC = () => {
         pictureCause: t.picture,
         pictureReading: t.picture_reading,
         branch: t.branch?.subdomain || "tub",
+        branch_id: t.branch_id ?? t.branch?.id ?? null,
       });
 
       setStatus(normalizedStatus);
@@ -193,6 +197,7 @@ const TicketActionButtons: React.FC = () => {
       }
 
       setStatus("accepted");
+      onStatusChange?.();
       showToast("You have accepted the ticket. Let's get to work!", "success");
     } catch {
       showToast("Failed to accept ticket", "error");
@@ -222,6 +227,7 @@ const TicketActionButtons: React.FC = () => {
       }
 
       setStatus("in progress");
+      onStatusChange?.();
       showToast("Nice! Works in progress. Keep safe guys!", "success");
     } catch {
       showToast("Failed to start work", "error");
@@ -319,6 +325,11 @@ const TicketActionButtons: React.FC = () => {
       showToast("Please fill out all required fields", "error");
       return;
     }
+
+    if (!napIdProp) {
+      showToast("Please select a NAP from the ticket details before submitting", "error");
+      return;
+    }
     const url = API.tech.completeTicket(id);
 
     try {
@@ -337,7 +348,8 @@ const TicketActionButtons: React.FC = () => {
       );
       formData.append("type", connectionType);
 
-      // ✅ ALWAYS send tag number (from the general field)
+      // ✅ ALWAYS send NAP ID and tag number
+      formData.append("nap_id", String(napIdProp));
       formData.append("tag_no", tagNumber || "");
 
       // Append PPPOE Name for wireless
@@ -345,10 +357,9 @@ const TicketActionButtons: React.FC = () => {
         formData.append("pppoe_name", pppoeName);
       }
 
-      // Append fields for wired connection (LCP number, NAP number, etc.)
+      // Append fields for wired connection (LCP number, port, etc.)
       if (connectionType === "wired") {
         formData.append("lcp_no", lcpNumber || "");
-        formData.append("nap_no", napNumber || "");
         formData.append("port_no", portNumber || "");
         // formData.append("tag_no", tagNumber || ""); // ← Remove this duplicate
         formData.append("vlan_id", vlanId || "");
@@ -425,6 +436,7 @@ const TicketActionButtons: React.FC = () => {
       }
 
       setStatus("in progress");
+      onStatusChange?.();
       showToast("Nice! Works in progress. Keep safe guys!", "success");
     } catch {
       showToast("Failed to start work", "error");
@@ -451,7 +463,6 @@ const TicketActionButtons: React.FC = () => {
       setPppoeName("");
     } else if (itemValue === "wired") {
       setLcpNumber("");
-      setNapNumber("");
       setPortNumber("");
       setTagNumber("");
       setVlanId("");
@@ -493,7 +504,6 @@ const TicketActionButtons: React.FC = () => {
         setMacAddress(draft.macAddress ?? "");
         setPppoeName(draft.pppoeName ?? "");
         setLcpNumber(draft.lcpNumber ?? "");
-        setNapNumber(draft.napNumber ?? "");
         setPortNumber(draft.portNumber ?? "");
         setTagNumber(draft.tagNumber ?? "");
         setVlanId(draft.vlanId ?? "");
@@ -527,7 +537,6 @@ const TicketActionButtons: React.FC = () => {
         macAddress,
         pppoeName,
         lcpNumber,
-        napNumber,
         portNumber,
         tagNumber,
         vlanId,
@@ -553,7 +562,6 @@ const TicketActionButtons: React.FC = () => {
     macAddress,
     pppoeName,
     lcpNumber,
-    napNumber,
     portNumber,
     tagNumber,
     vlanId,
@@ -755,15 +763,7 @@ const TicketActionButtons: React.FC = () => {
                       onChangeText={setLcpNumber}
                     />
                   </View>
-                  <View style={styles.formSection}>
-                    <Text style={styles.inputLabel}>NAP Number</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder="Enter NAP Number"
-                      value={napNumber}
-                      onChangeText={setNapNumber}
-                    />
-                  </View>
+                  {/* NAP is now a global required field above */}
                   <View style={styles.formSection}>
                     <Text style={styles.inputLabel}>Port Number</Text>
                     <TextInput
@@ -937,7 +937,7 @@ const TicketActionButtons: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                (!remarks.trim() || !location) && styles.submitButtonDisabled,
+                (!remarks.trim() || !location || !napIdProp) && styles.submitButtonDisabled,
               ]}
               onPress={() =>
                 handleSubmitCompleted(
@@ -1307,6 +1307,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#2259d0ff",
   },
+
 });
 
 export default TicketActionButtons;

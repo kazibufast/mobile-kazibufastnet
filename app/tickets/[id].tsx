@@ -3,18 +3,21 @@ import { getToken } from "@/scripts/token";
 import { getUser } from "@/scripts/user";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Linking,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -40,9 +43,29 @@ interface TicketItem {
   latitude: string;
   longitude: string;
   tagNumber: string;
+  napId: number | null;
   pppoeName: string;
   pppoePassword: string;
+  branch_id: number | null;
 }
+
+interface NapItem {
+  id: number;
+  type: string;
+  serial_number: string;
+  latitude: string;
+  longitude: string;
+  splitter_type: string;
+  address: string;
+  notes: string;
+  active: boolean;
+  branch_id: number;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+const NAPS_CACHE_KEY = "@naps_cache";
 
 const copyToClipboard = async (text: string) => {
   await Clipboard.setStringAsync(text);
@@ -59,6 +82,12 @@ export default function TicketDetails() {
 
   const [ticket, setTicket] = useState<TicketItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // NAP state
+  const [allNaps, setAllNaps] = useState<NapItem[]>([]);
+  const [napSearch, setNapSearch] = useState("");
+  const [showNapDropdown, setShowNapDropdown] = useState(false);
+  const [selectedNapId, setSelectedNapId] = useState<number | null>(null);
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();
@@ -116,9 +145,19 @@ export default function TicketDetails() {
         longitude: t.subscription?.longitude ?? null,
 
         tagNumber: t.subscription?.job_order?.span_no ?? "N/A",
+        napId: t.subscription?.job_order?.nap_id ?? null,
         pppoeName: t.subscription?.job_order?.pppoe_name ?? "N/A",
         pppoePassword: t.subscription?.job_order?.pppoe_password ?? "N/A",
+        branch_id: t.branch_id ?? t.branch?.id ?? null,
       });
+
+      // Set NAP state from ticket data (don't overwrite local selection)
+      const existingNapId = t.subscription?.job_order?.nap_id ?? null;
+      if (existingNapId) {
+        setSelectedNapId(existingNapId);
+      }
+      // If no nap_id from API, preserve any locally selected NAP
+      // (selectedNapId state is kept as-is)
     } catch (error) {
       Alert.alert("Notice", "Ticket not available", [
         {
@@ -134,6 +173,64 @@ export default function TicketDetails() {
   useEffect(() => {
     fetchTicketDetails();
   }, [fetchTicketDetails]);
+
+  /* ---------- FETCH & CACHE NAPS ---------- */
+
+  const fetchNaps = useCallback(async () => {
+    try {
+      const cached = await AsyncStorage.getItem(NAPS_CACHE_KEY);
+      if (cached) setAllNaps(JSON.parse(cached));
+
+      const token = await getToken();
+      const res = await fetch(API.tech.naps(), {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list: NapItem[] = data.naps ?? data.data ?? data ?? [];
+        setAllNaps(list);
+        await AsyncStorage.setItem(NAPS_CACHE_KEY, JSON.stringify(list));
+      }
+    } catch (e) {
+      console.log("Failed to fetch naps", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNaps();
+  }, [fetchNaps]);
+
+  // Resolve selected NAP details
+  const resolvedNap = useMemo(
+    () => allNaps.find((n) => n.id === selectedNapId) ?? null,
+    [allNaps, selectedNapId],
+  );
+
+  // Filter NAPs for search dropdown (by branch_id + query)
+  const filteredNaps = useMemo(() => {
+    let filtered = allNaps;
+    if (ticket?.branch_id) {
+      filtered = filtered.filter((n) => n.branch_id === ticket.branch_id);
+    }
+    if (napSearch.trim()) {
+      const q = napSearch.toLowerCase();
+      filtered = filtered.filter(
+        (n) =>
+          n.serial_number.toLowerCase().includes(q) ||
+          n.address.toLowerCase().includes(q),
+      );
+    }
+    return filtered;
+  }, [allNaps, ticket?.branch_id, napSearch]);
+
+  const handleSelectNap = (nap: NapItem) => {
+    setSelectedNapId(nap.id);
+    setNapSearch("");
+    setShowNapDropdown(false);
+  };
+
+  const statusLower = ticket?.status?.toLowerCase() ?? "";
+  const canEditNap = statusLower === "in progress" || statusLower === "accepted";
 
   const formatDateTime = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -291,7 +388,7 @@ export default function TicketDetails() {
             <View style={styles.row}>
               <View style={[styles.card, { width: getCardWidth() }]}>
                 <View style={styles.labelRow}>
-                  <Text style={styles.cardLabel}>tag Number</Text>
+                  <Text style={styles.cardLabel}>Tag Number</Text>
                   <TouchableOpacity
                     onPress={() => copyToClipboard(ticket.tagNumber)}
                   >
@@ -301,6 +398,105 @@ export default function TicketDetails() {
 
                 <Text style={styles.cardValue}>{ticket.tagNumber}</Text>
               </View>
+            </View>
+
+            {/* NAP Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>NAP Details</Text>
+              {canEditNap && !resolvedNap ? (
+                /* Editable: searchable NAP selector */
+                <View>
+                  <TextInput
+                    style={[styles.napInput, !selectedNapId && { borderColor: "#EF4444" }]}
+                    placeholder="Search NAP by serial number or address..."
+                    placeholderTextColor="#94A3B8"
+                    value={napSearch}
+                    onChangeText={(text) => {
+                      setNapSearch(text);
+                      setShowNapDropdown(true);
+                    }}
+                    onFocus={() => setShowNapDropdown(true)}
+                  />
+                  {showNapDropdown && napSearch.trim().length > 0 && (
+                    <View style={styles.napDropdown}>
+                      {filteredNaps.length === 0 ? (
+                        <Text style={styles.napDropdownEmpty}>
+                          No NAPs found{ticket?.branch_id ? " for this branch" : ""}
+                        </Text>
+                      ) : (
+                        <FlatList
+                          data={filteredNaps.slice(0, 10)}
+                          keyExtractor={(item) => String(item.id)}
+                          keyboardShouldPersistTaps="handled"
+                          nestedScrollEnabled
+                          style={{ maxHeight: 200 }}
+                          renderItem={({ item }) => (
+                            <TouchableOpacity
+                              style={styles.napDropdownItem}
+                              onPress={() => handleSelectNap(item)}
+                            >
+                              <Text style={styles.napDropdownSerial}>
+                                {item.serial_number}
+                              </Text>
+                              <Text style={styles.napDropdownAddress} numberOfLines={1}>
+                                {item.type.toUpperCase()} · {item.splitter_type}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        />
+                      )}
+                    </View>
+                  )}
+                  <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>
+                    * Required — select a NAP before completing the ticket
+                  </Text>
+                </View>
+              ) : resolvedNap ? (
+                /* Display resolved NAP info */
+                <View>
+                  <View style={styles.row}>
+                    <View style={[styles.card, { width: getCardWidth() }]}>
+                      <View style={styles.labelRow}>
+                        <Text style={styles.cardLabel}>Serial Number</Text>
+                        <TouchableOpacity
+                          onPress={() => copyToClipboard(resolvedNap.serial_number)}
+                        >
+                          <MaterialIcons name="content-copy" size={18} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.cardValue}>{resolvedNap.serial_number}</Text>
+                    </View>
+                    <View style={[styles.card, { width: getCardWidth() }]}>
+                      <Text style={styles.cardLabel}>Type</Text>
+                      <Text style={styles.cardValue}>{resolvedNap.type.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.row}>
+                    <View style={[styles.card, { width: getCardWidth() }]}>
+                      <Text style={styles.cardLabel}>Splitter Type</Text>
+                      <Text style={styles.cardValue}>{resolvedNap.splitter_type}</Text>
+                    </View>
+                  </View>
+                  {canEditNap && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedNapId(null);
+                        setNapSearch("");
+                      }}
+                      style={styles.changeNapButton}
+                    >
+                      <Text style={styles.changeNapButtonText}>Change NAP</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                /* No NAP assigned */
+                <View style={styles.fullCard}>
+                  <Text style={{ color: "#6B7280", fontStyle: "italic" }}>
+                    No NAP assigned
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -327,7 +523,7 @@ export default function TicketDetails() {
           </View>
 
           {/* Action Buttons */}
-          <TicketActionButtons ticket={ticket} />
+          <TicketActionButtons ticket={ticket} onStatusChange={fetchTicketDetails} napId={selectedNapId} />
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -429,5 +625,63 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  napInput: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#111827",
+  },
+  napDropdown: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: "#FFFFFF",
+    maxHeight: 220,
+    zIndex: 100,
+  },
+  napDropdownItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  napDropdownSerial: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  napDropdownAddress: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  napDropdownEmpty: {
+    padding: 14,
+    fontSize: 13,
+    color: "#9CA3AF",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  changeNapButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+    marginTop: 4,
+  },
+  changeNapButtonText: {
+    color: "#3B82F6",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
