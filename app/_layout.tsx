@@ -25,23 +25,15 @@ export default function RootLayout() {
       <ToastProvider>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="setup-pin" options={{ headerShown: false }} />
-          <Stack.Screen name="mpin-login" options={{ headerShown: false }} />
-
-          <Stack.Screen name="tabs-redirect" options={{ headerShown: false }} />
-
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tech-tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="tickets" options={{ headerShown: false }} />
           <Stack.Screen name="naps" options={{ headerShown: false }} />
-
+          <Stack.Screen name="add-ticket" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/AccountSettings" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/PrivacySecurity" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/HelpSupport" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/AboutKazibufast" options={{ headerShown: false }} />
-          <Stack.Screen name="UserAnnouncement/seeAllAnnouncements" options={{ headerShown: false }} />
-          <Stack.Screen name="UserAnnouncement/seeAllUpcomingBills" options={{ headerShown: false }} />
-          <Stack.Screen name="add-ticket" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ToastProvider>

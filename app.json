@@ -35,7 +35,7 @@
       }
     },
     "android": {
-      "package": "com.yourcompany.kazi",
+      "package": "com.kazibufast.kazi",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/kazi.png"
