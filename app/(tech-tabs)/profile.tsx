@@ -159,12 +159,12 @@ const Profile: React.FC = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Terms and Conditions</Text>
 
-            <TouchableOpacity style={styles.termsItem}>
+            <TouchableOpacity style={styles.termsItem} onPress={() => router.push('/ProfileSettings/PrivacyPolicy')}>
               <Text style={styles.termsText}>Privacy Policy</Text>
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.termsItem}>
+            <TouchableOpacity style={styles.termsItem} onPress={() => router.push('/ProfileSettings/TermsOfService')}>
               <Text style={styles.termsText}>Terms of Service</Text>
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>

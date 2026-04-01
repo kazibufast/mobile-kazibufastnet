@@ -189,8 +189,8 @@ const PrivacySecurity: React.FC = () => {
           <View style={styles.privacyPolicyContainer}>
             <Text style={styles.privacyPolicyText}>
               By using our services, you agree to our{' '}
-              <Text style={styles.linkText}>Privacy Policy</Text> and{' '}
-              <Text style={styles.linkText}>Terms of Service</Text>.
+              <Text style={styles.linkText} onPress={() => router.push('/ProfileSettings/PrivacyPolicy')}>Privacy Policy</Text> and{' '}
+              <Text style={styles.linkText} onPress={() => router.push('/ProfileSettings/TermsOfService')}>Terms of Service</Text>.
             </Text>
           </View>
         </ScrollView>
