@@ -67,6 +67,7 @@ export const API = {
     home: () => `${getApiBaseUrl()}/api/app/tech/home`,
     tickets: () => `${getApiBaseUrl()}/api/app/tech/tickets`,
     team: () => `${getApiBaseUrl()}/api/app/tech/team`,
+    attendanceStatus: () => `${getApiBaseUrl()}/api/app/tech/attendance-status`,
     timeIn: () => `${getApiBaseUrl()}/api/app/tech/time-in`,
     timeOut: () => `${getApiBaseUrl()}/api/app/tech/time-out`,
     viewTicket: (ticketId: string) =>
@@ -87,6 +88,8 @@ export const API = {
     storeNap: () => `${getApiBaseUrl()}/api/app/tech/naps`,
     napTags: (napId: number | string) =>
       `${getApiBaseUrl()}/api/app/tech/naps/${napId}/tags`,
+    napUsedPorts: (napId: number | string) =>
+      `${getApiBaseUrl()}/api/app/tech/naps/${napId}/used-ports`,
     clientMap: (lat: string, lon: string) =>
       `${getApiBaseUrl()}/client/map/${lat}/${lon}`,
   },

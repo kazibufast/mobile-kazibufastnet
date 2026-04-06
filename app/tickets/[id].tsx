@@ -2,6 +2,7 @@ import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
 import { getUser } from "@/scripts/user";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,6 +13,7 @@ import {
   Alert,
   FlatList,
   Linking,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -44,6 +46,7 @@ interface TicketItem {
   longitude: string;
   tagNumber: string;
   napId: number | null;
+  napPort: string;
   pppoeName: string;
   pppoePassword: string;
   branch_id: number | null;
@@ -88,6 +91,13 @@ export default function TicketDetails() {
   const [napSearch, setNapSearch] = useState("");
   const [showNapDropdown, setShowNapDropdown] = useState(false);
   const [selectedNapId, setSelectedNapId] = useState<number | null>(null);
+  const [napPort, setNapPort] = useState("");
+  const [usedPorts, setUsedPorts] = useState<number[]>([]);
+
+  // QR scanner state
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();
@@ -146,6 +156,7 @@ export default function TicketDetails() {
 
         tagNumber: t.subscription?.job_order?.span_no ?? "N/A",
         napId: t.subscription?.job_order?.nap_id ?? null,
+        napPort: t.subscription?.job_order?.nap_port ?? "",
         pppoeName: t.subscription?.job_order?.pppoe_name ?? "N/A",
         pppoePassword: t.subscription?.job_order?.pppoe_password ?? "N/A",
         branch_id: t.branch_id ?? t.branch?.id ?? null,
@@ -156,8 +167,10 @@ export default function TicketDetails() {
       if (existingNapId) {
         setSelectedNapId(existingNapId);
       }
-      // If no nap_id from API, preserve any locally selected NAP
-      // (selectedNapId state is kept as-is)
+      const existingNapPort = t.subscription?.job_order?.nap_port ?? "";
+      if (existingNapPort) {
+        setNapPort(String(existingNapPort));
+      }
     } catch (error) {
       Alert.alert("Notice", "Ticket not available", [
         {
@@ -223,10 +236,98 @@ export default function TicketDetails() {
     return filtered;
   }, [allNaps, ticket?.branch_id, napSearch]);
 
+  const fetchUsedPorts = useCallback(async (napId: number) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(API.tech.napUsedPorts(napId), {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Expect { used_ports: [1, 3, 5, ...] } from backend
+        const ports: number[] = data.used_ports ?? data.data ?? data ?? [];
+        // Exclude the current ticket's own port so it can keep its selection
+        const currentTicketPort = ticket?.napPort ? parseInt(ticket.napPort, 10) : null;
+        setUsedPorts(currentTicketPort ? ports.filter((p) => p !== currentTicketPort) : ports);
+      }
+    } catch (e) {
+      console.log("Failed to fetch used ports", e);
+    }
+  }, [ticket?.napPort]);
+
+  // Fetch used ports whenever selectedNapId changes
+  useEffect(() => {
+    if (selectedNapId) {
+      fetchUsedPorts(selectedNapId);
+    } else {
+      setUsedPorts([]);
+    }
+  }, [selectedNapId, fetchUsedPorts]);
+
   const handleSelectNap = (nap: NapItem) => {
     setSelectedNapId(nap.id);
     setNapSearch("");
     setShowNapDropdown(false);
+  };
+
+  const handleQrScan = async () => {
+    if (!cameraPermission?.granted) {
+      const { granted } = await requestCameraPermission();
+      if (!granted) {
+        Alert.alert("Permission Denied", "Camera permission is required to scan QR codes.");
+        return;
+      }
+    }
+    setScanned(false);
+    setScannerOpen(true);
+  };
+
+  const onBarcodeScanned = ({ data }: { data: string }) => {
+    if (scanned) return;
+    setScanned(true);
+    setScannerOpen(false);
+
+    const trimmed = data.replace(/\/+$/, "");
+    const segments = trimmed.split("/");
+    const serial = decodeURIComponent(segments[segments.length - 1]);
+
+    if (!serial) {
+      Alert.alert("Error", "Could not read QR code.");
+      return;
+    }
+
+    // Find matching NAP by serial number
+    const match = allNaps.find((n) => n.serial_number === serial);
+    if (match) {
+      handleSelectNap(match);
+    } else {
+      // Pre-fill the search with the scanned serial so the user can see it wasn't found
+      setNapSearch(serial);
+      setShowNapDropdown(true);
+      Alert.alert("Not Found", `No NAP found with serial number "${serial}".`);
+    }
+  };
+
+  // Parse max port count from splitter_type (e.g. "1:16" → 16)
+  const maxPort = useMemo(() => {
+    if (!resolvedNap?.splitter_type) return 0;
+    const match = resolvedNap.splitter_type.match(/(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+  }, [resolvedNap?.splitter_type]);
+
+  const handleNapPortChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, "");
+    if (cleaned === "") {
+      setNapPort("");
+      return;
+    }
+    const num = parseInt(cleaned, 10);
+    if (num < 1 || num > maxPort) return;
+    if (usedPorts.includes(num)) {
+      Alert.alert("Port Taken", `Port ${num} is already assigned to another job order. Please choose a different port.`);
+      return;
+    }
+    setNapPort(cleaned);
   };
 
   const statusLower = ticket?.status?.toLowerCase() ?? "";
@@ -400,23 +501,29 @@ export default function TicketDetails() {
               </View>
             </View>
 
-            {/* NAP Section */}
+            {/* NAP Section — only for branch_id 1 */}
+            {ticket.branch_id === 1 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>NAP Details</Text>
               {canEditNap && !resolvedNap ? (
                 /* Editable: searchable NAP selector */
                 <View>
-                  <TextInput
-                    style={[styles.napInput, !selectedNapId && { borderColor: "#EF4444" }]}
-                    placeholder="Search NAP by serial number or address..."
-                    placeholderTextColor="#94A3B8"
-                    value={napSearch}
-                    onChangeText={(text) => {
-                      setNapSearch(text);
-                      setShowNapDropdown(true);
-                    }}
-                    onFocus={() => setShowNapDropdown(true)}
-                  />
+                  <View style={styles.napInputRow}>
+                    <TextInput
+                      style={[styles.napInput, { flex: 1 }, !selectedNapId && { borderColor: "#EF4444" }]}
+                      placeholder="Search NAP by serial number or address..."
+                      placeholderTextColor="#94A3B8"
+                      value={napSearch}
+                      onChangeText={(text) => {
+                        setNapSearch(text);
+                        setShowNapDropdown(true);
+                      }}
+                      onFocus={() => setShowNapDropdown(true)}
+                    />
+                    <TouchableOpacity onPress={handleQrScan} style={styles.qrButton}>
+                      <Ionicons name="qr-code-outline" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                   {showNapDropdown && napSearch.trim().length > 0 && (
                     <View style={styles.napDropdown}>
                       {filteredNaps.length === 0 ? (
@@ -476,12 +583,41 @@ export default function TicketDetails() {
                       <Text style={styles.cardLabel}>Splitter Type</Text>
                       <Text style={styles.cardValue}>{resolvedNap.splitter_type}</Text>
                     </View>
+                    <View style={[styles.card, { width: getCardWidth() }]}>
+                      <Text style={styles.cardLabel}>
+                        Port Number{maxPort > 0 ? ` (1-${maxPort})` : ""}
+                      </Text>
+                      {canEditNap ? (
+                        <TextInput
+                          style={styles.napPortInput}
+                          placeholder={maxPort > 0 ? `1-${maxPort}` : "Enter port #"}
+                          placeholderTextColor="#94A3B8"
+                          value={napPort}
+                          onChangeText={handleNapPortChange}
+                          keyboardType="numeric"
+                          maxLength={String(maxPort).length}
+                        />
+                      ) : (
+                        <Text style={styles.cardValue}>{napPort || "N/A"}</Text>
+                      )}
+                    </View>
                   </View>
+                  {canEditNap && !napPort.trim() && (
+                    <Text style={{ color: "#EF4444", fontSize: 11, marginBottom: 4 }}>
+                      * Required — enter a port number
+                    </Text>
+                  )}
+                  {canEditNap && usedPorts.length > 0 && (
+                    <Text style={{ color: "#6B7280", fontSize: 11, marginBottom: 4 }}>
+                      Ports already in use: {usedPorts.sort((a, b) => a - b).join(", ")}
+                    </Text>
+                  )}
                   {canEditNap && (
                     <TouchableOpacity
                       onPress={() => {
                         setSelectedNapId(null);
                         setNapSearch("");
+                        setNapPort("");
                       }}
                       style={styles.changeNapButton}
                     >
@@ -498,6 +634,7 @@ export default function TicketDetails() {
                 </View>
               )}
             </View>
+            )}
           </View>
 
           {/* Subject */}
@@ -523,9 +660,28 @@ export default function TicketDetails() {
           </View>
 
           {/* Action Buttons */}
-          <TicketActionButtons ticket={ticket} onStatusChange={fetchTicketDetails} napId={selectedNapId} />
+          <TicketActionButtons ticket={ticket} onStatusChange={fetchTicketDetails} napId={selectedNapId} napPort={napPort} />
         </ScrollView>
       </View>
+
+      {/* QR Scanner Modal */}
+      <Modal visible={scannerOpen} animationType="slide" onRequestClose={() => setScannerOpen(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+          <View style={styles.scannerHeader}>
+            <TouchableOpacity onPress={() => setScannerOpen(false)}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.scannerTitle}>Scan NAP QR Code</Text>
+            <View style={{ width: 28 }} />
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+            onBarcodeScanned={scanned ? undefined : onBarcodeScanned}
+          />
+          <Text style={styles.scannerHint}>Point the camera at a NAP box QR code</Text>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -669,6 +825,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontStyle: "italic",
   },
+  napPortInput: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#fff",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2D3748",
+    marginTop: 2,
+  },
   changeNapButton: {
     alignSelf: "flex-start",
     paddingHorizontal: 12,
@@ -683,5 +851,35 @@ const styles = StyleSheet.create({
     color: "#3B82F6",
     fontSize: 13,
     fontWeight: "600",
+  },
+  napInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  qrButton: {
+    backgroundColor: "#00AF9F",
+    borderRadius: 8,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  scannerTitle: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  scannerHint: {
+    color: "#ccc",
+    textAlign: "center",
+    paddingVertical: 16,
+    fontSize: 14,
   },
 });

@@ -65,7 +65,7 @@ interface TicketItem {
 
 /* ---------------- COMPONENT ---------------- */
 
-const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: number | null }> = ({ onStatusChange, napId: napIdProp }) => {
+const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: number | null; napPort?: string }> = ({ onStatusChange, napId: napIdProp, napPort: napPortProp }) => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [status, setStatus] = useState<TicketStatus>("pending");
   const [ticket, setTicket] = useState<TicketItem | null>(null);
@@ -326,8 +326,14 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
       return;
     }
 
-    if (!napIdProp) {
+    const napRequired = ticket?.branch_id === 1;
+    if (napRequired && !napIdProp) {
       showToast("Please select a NAP from the ticket details before submitting", "error");
+      return;
+    }
+
+    if (napRequired && !napPortProp?.trim()) {
+      showToast("Please enter a NAP port number before submitting", "error");
       return;
     }
     const url = API.tech.completeTicket(id);
@@ -348,8 +354,11 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
       );
       formData.append("type", connectionType);
 
-      // ✅ ALWAYS send NAP ID and tag number
-      formData.append("nap_id", String(napIdProp));
+      // Send NAP fields only for branch 1
+      if (ticket?.branch_id === 1 && napIdProp) {
+        formData.append("nap_id", String(napIdProp));
+        formData.append("nap_port", napPortProp || "");
+      }
       formData.append("tag_no", tagNumber || "");
 
       // Append PPPOE Name for wireless
@@ -937,7 +946,7 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                (!remarks.trim() || !location || !napIdProp) && styles.submitButtonDisabled,
+                (!remarks.trim() || !location || (ticket?.branch_id === 1 && (!napIdProp || !napPortProp?.trim()))) && styles.submitButtonDisabled,
               ]}
               onPress={() =>
                 handleSubmitCompleted(
