@@ -17,6 +17,8 @@ import {
   Animated,
   Dimensions,
   Image,
+  Linking,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -120,40 +122,42 @@ export default function TimeInScreen() {
         const user = getUser();
         setTechnician(user);
 
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setLocationText("Location permission denied.");
-          return;
-        }
-        const position = await Location.getCurrentPositionAsync({});
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setLocationCoords({ latitude: lat, longitude: lon });
-
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-          { headers: { "User-Agent": "expo-app" } }
-        );
-        const data = await res.json();
-        const addr = data.address || {};
-        let text = "";
-        if (addr.suburb || addr.neighbourhood || addr.hamlet)
-          text += `Barangay ${
-            addr.suburb || addr.neighbourhood || addr.hamlet
-          }, `;
-        if (addr.city || addr.town || addr.village)
-          text += `${addr.city || addr.town || addr.village}, `;
-        if (addr.state) text += `${addr.state}`;
-        setLocationText(text || "Location not found.");
-
-        const { status: cameraStatus } =
-          await Camera.requestCameraPermissionsAsync();
-        if (cameraStatus !== "granted") {
-          setPermissionMessage("Camera permission denied.");
-          setHasPermission(false);
+        if (Platform.OS === "web") {
+          setLocationText("Location not available on web.");
         } else {
-          setPermissionMessage("Camera permission granted.");
-          setHasPermission(true);
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            setLocationText("Location permission denied.");
+            Alert.alert(
+              "Location Required",
+              "Location permission is required for attendance. Please enable it in your device settings.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Open Settings", onPress: () => Linking.openSettings() },
+              ]
+            );
+            return;
+          }
+          const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setLocationCoords({ latitude: lat, longitude: lon });
+
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+            { headers: { "User-Agent": "expo-app" } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          let text = "";
+          if (addr.suburb || addr.neighbourhood || addr.hamlet)
+            text += `Barangay ${
+              addr.suburb || addr.neighbourhood || addr.hamlet
+            }, `;
+          if (addr.city || addr.town || addr.village)
+            text += `${addr.city || addr.town || addr.village}, `;
+          if (addr.state) text += `${addr.state}`;
+          setLocationText(text || "Location not found.");
         }
       } catch (error) {
         setLocationText("Unable to retrieve location.");
@@ -182,7 +186,8 @@ export default function TimeInScreen() {
     setFacing((f) => (f === "back" ? "front" : "back"));
 
   const handleTimeIn = async () => {
-    if (!locationCoords || !photo) {
+    const isWeb = Platform.OS === "web";
+    if ((!isWeb && !locationCoords) || !photo) {
       Alert.alert("Error", "Missing location or picture.");
       return;
     }
@@ -200,11 +205,11 @@ export default function TimeInScreen() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            location: locationCoords.latitude + "," + locationCoords.longitude,
-            time: new Date().toLocaleString("en-GB", {
-              hour12: false,
-            }),
-            picture: photo.base64,
+            location: locationCoords
+              ? locationCoords.latitude + "," + locationCoords.longitude
+              : "0,0",
+            time: new Date().toISOString().slice(0, 19).replace("T", " "),
+            picture: photo.base64.replace(/^data:image\/\w+;base64,/, ""),
           }),
         }
       );
@@ -340,7 +345,7 @@ export default function TimeInScreen() {
               </Text>
             </View>
             <Image
-              source={{ uri: "data:image/jpg;base64," + photo.base64 }}
+              source={{ uri: photo.base64.startsWith("data:") ? photo.base64 : "data:image/jpg;base64," + photo.base64 }}
               style={styles.photoPreview}
             />
             <View style={styles.photoActions}>

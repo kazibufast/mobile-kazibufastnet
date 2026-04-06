@@ -12,6 +12,8 @@ import {
   Animated,
   Dimensions,
   Image,
+  Linking,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -125,32 +127,47 @@ export default function TimeInScreen() {
         // const user = getUser();
         setTechnician(user);
 
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setLocationText("Location permission denied.");
-          return;
-        }
-        const position = await Location.getCurrentPositionAsync({});
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setLocationCoords({ latitude: lat, longitude: lon });
+        if (Platform.OS === "web") {
+          setLocationText("Location not available on web.");
+        } else {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          console.log("Location permission status:", status);
+          if (status !== "granted") {
+            setLocationText("Location permission denied.");
+            Alert.alert(
+              "Location Required",
+              "Location permission is required for attendance. Please enable it in your device settings.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Open Settings", onPress: () => Linking.openSettings() },
+              ]
+            );
+            return;
+          }
+          const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          console.log("Location coords:", position.coords.latitude, position.coords.longitude);
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setLocationCoords({ latitude: lat, longitude: lon });
 
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-          { headers: { "User-Agent": "expo-app" } }
-        );
-        const data = await res.json();
-        const addr = data.address || {};
-        let text = "";
-        if (addr.suburb || addr.neighbourhood || addr.hamlet)
-          text += `Barangay ${
-            addr.suburb || addr.neighbourhood || addr.hamlet
-          }, `;
-        if (addr.city || addr.town || addr.village)
-          text += `${addr.city || addr.town || addr.village}, `;
-        if (addr.state) text += `${addr.state}`;
-        setLocationText(text || "Location not found.");
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+            { headers: { "User-Agent": "expo-app" } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          let text = "";
+          if (addr.suburb || addr.neighbourhood || addr.hamlet)
+            text += `Barangay ${
+              addr.suburb || addr.neighbourhood || addr.hamlet
+            }, `;
+          if (addr.city || addr.town || addr.village)
+            text += `${addr.city || addr.town || addr.village}, `;
+          if (addr.state) text += `${addr.state}`;
+          setLocationText(text || "Location not found.");
+        }
       } catch (error) {
+        console.log("Location error:", error);
         setLocationText("Unable to retrieve location.");
       } finally {
         setIsLoading(false);
@@ -177,7 +194,10 @@ export default function TimeInScreen() {
     setFacing((f) => (f === "back" ? "front" : "back"));
 
   const handleTimeIn = async () => {
-    if (!locationCoords || !photo?.base64) {
+    console.log("handleTimeIn called", { locationCoords, hasBase64: !!photo?.base64 });
+
+    const isWeb = Platform.OS === "web";
+    if ((!isWeb && !locationCoords) || !photo?.base64) {
       Alert.alert("Error", "Missing location or picture.");
       return;
     }
@@ -186,6 +206,8 @@ export default function TimeInScreen() {
 
     try {
       const token = await getToken();
+      console.log("Token:", token ? "exists" : "missing");
+      console.log("URL:", API.tech.timeIn());
       const res = await fetch(
         API.tech.timeIn(),
         {
@@ -196,27 +218,24 @@ export default function TimeInScreen() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            location: locationCoords.latitude + "," + locationCoords.longitude,
-            time: new Date().toLocaleString("en-GB", {
-              hour12: false,
-            }),
-
-            picture: photo.base64,
+            location: locationCoords
+              ? locationCoords.latitude + "," + locationCoords.longitude
+              : "0,0",
+            time: new Date().toISOString().slice(0, 19).replace("T", " "),
+            picture: photo.base64.replace(/^data:image\/\w+;base64,/, ""),
           }),
         }
       );
 
       const data = await res.json();
 
-      if (data.user == "active") {
-        // Show success alert, then automatically navigate after 1.5 seconds
+      if (res.ok) {
         Alert.alert("Success", "Time In recorded successfully!");
         setTimeout(() => {
           router.push("/(tech-tabs)/home");
         }, 1500);
       } else {
-        alert( data.message);
-        router.push('/(tech-tabs)/home')
+        Alert.alert("Error", data.message || "Failed to submit Time In. Please try again.");
       }
     } catch (error) {
       Alert.alert("Error", "Network error. Please check your connection.");
@@ -340,7 +359,7 @@ export default function TimeInScreen() {
               </Text>
             </View>
             <Image
-              source={{ uri: "data:image/jpg;base64," + photo.base64 }}
+              source={{ uri: photo.base64.startsWith("data:") ? photo.base64 : "data:image/jpg;base64," + photo.base64 }}
               style={styles.photoPreview}
             />
             <View style={styles.photoActions}>

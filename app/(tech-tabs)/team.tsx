@@ -1,7 +1,8 @@
 import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
     Linking,
@@ -58,7 +59,7 @@ export default function TeamScreen() {
         }
     }, []);
 
-    useEffect(() => { fetchTeam(); }, [fetchTeam]);
+    useFocusEffect(useCallback(() => { fetchTeam(); }, [fetchTeam]));
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);

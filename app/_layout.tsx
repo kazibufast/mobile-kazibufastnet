@@ -1,5 +1,7 @@
 import { ToastProvider } from '@/components/Toast';
 import { initApiBaseUrl } from '@/constants/api';
+import { setUser } from '@/scripts/user';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -12,10 +14,19 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    initApiBaseUrl().then(() => {
+    const init = async () => {
+      await initApiBaseUrl();
+
+      // Restore user from storage so all screens have it immediately
+      try {
+        const savedUser = await AsyncStorage.getItem('user');
+        if (savedUser) setUser(JSON.parse(savedUser));
+      } catch {}
+
       setReady(true);
       SplashScreen.hideAsync();
-    });
+    };
+    init();
   }, []);
 
   if (!ready) return null;
@@ -34,6 +45,8 @@ export default function RootLayout() {
           <Stack.Screen name="ProfileSettings/PrivacySecurity" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/HelpSupport" options={{ headerShown: false }} />
           <Stack.Screen name="ProfileSettings/AboutKazibufast" options={{ headerShown: false }} />
+          <Stack.Screen name="(time-in)" options={{ headerShown: false }} />
+          <Stack.Screen name="(time-out)" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ToastProvider>

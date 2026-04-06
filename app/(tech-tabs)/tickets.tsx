@@ -2,7 +2,8 @@ import { API } from '@/constants/api';
 import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -95,7 +96,7 @@ const Ticket: React.FC = () => {
     }
   }, [statusFilter, typeFilter]);
 
-  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+  useFocusEffect(useCallback(() => { fetchTickets(); }, [fetchTickets]));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

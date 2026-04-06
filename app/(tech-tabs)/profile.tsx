@@ -1,14 +1,17 @@
 import { showToast } from '@/components/Toast';
 import {
+  API,
   API_ENVIRONMENTS,
   getApiBaseUrl,
   getCurrentEnvironment,
   setApiBaseUrl,
 } from '@/constants/api';
+import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -24,6 +27,25 @@ import { getUser, setUser } from '../../scripts/user';
 const Profile: React.FC = () => {
   const router = useRouter();
   const user = getUser();
+
+  const [timedIn, setTimedIn] = useState<boolean | null>(null);
+
+  const checkAttendance = useCallback(async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(API.tech.attendanceStatus(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setTimedIn(data.timed_in);
+    } catch {}
+  }, []);
+
+  useFocusEffect(useCallback(() => { checkAttendance(); }, [checkAttendance]));
 
   const [envModalVisible, setEnvModalVisible] = useState(false);
   const [currentEnv, setCurrentEnv] = useState(getCurrentEnvironment());
@@ -169,6 +191,26 @@ const Profile: React.FC = () => {
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
           </View>
+
+          {timedIn === false && (
+            <TouchableOpacity
+              style={styles.timeInButton}
+              onPress={() => router.push('/(time-in)/time-in')}
+            >
+              <Ionicons name="stopwatch-outline" size={20} color="#fff" />
+              <Text style={styles.timeInText}>Time In</Text>
+            </TouchableOpacity>
+          )}
+
+          {timedIn === true && (
+            <TouchableOpacity
+              style={styles.timeOutButton}
+              onPress={() => router.push('/(time-out)/time-out')}
+            >
+              <Ionicons name="stopwatch-outline" size={20} color="#fff" />
+              <Text style={styles.timeOutText}>Time Out</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.logoutButton}
@@ -334,6 +376,38 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 15,
     color: '#333',
+  },
+  timeInButton: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingVertical: 15,
+    backgroundColor: '#27AE60',
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  timeInText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  timeOutButton: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingVertical: 15,
+    backgroundColor: '#F39C12',
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  timeOutText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   logoutButton: {
     marginHorizontal: 20,

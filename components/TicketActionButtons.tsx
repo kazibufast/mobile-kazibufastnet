@@ -76,7 +76,7 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
   const [pppoeName, setPppoeName] = useState("");
   const [lcpNumber, setLcpNumber] = useState("");
   // napId comes from prop (set by ticket details page)
-  const [portNumber, setPortNumber] = useState("");
+  const [portNumber, setPortNumber] = useState(napPortProp || "");
   const [tagNumber, setTagNumber] = useState("");
   const [connectionType, setConnectionType] = useState("");
   const [vlanId, setVlanId] = useState("");
@@ -171,6 +171,11 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
   useEffect(() => {
     if (id) fetchTicket();
   }, [id]);
+
+  // Sync port number from NAP details into the wired form field
+  useEffect(() => {
+    if (napPortProp) setPortNumber(napPortProp);
+  }, [napPortProp]);
 
   /* ---------------- ACTIONS ---------------- */
 

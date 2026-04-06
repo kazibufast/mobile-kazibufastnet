@@ -1,7 +1,8 @@
 import { API } from '@/constants/api';
 import { getToken } from '@/scripts/token';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -75,7 +76,7 @@ const Home: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { fetchHome(); }, [fetchHome]);
+  useFocusEffect(useCallback(() => { fetchHome(); }, [fetchHome]));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

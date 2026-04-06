@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -158,7 +159,7 @@ const Naps: React.FC = () => {
     }
   }, [loadPendingCount]);
 
-  useEffect(() => { fetchNaps(); }, [fetchNaps]);
+  useFocusEffect(useCallback(() => { fetchNaps(); }, [fetchNaps]));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
