@@ -40,31 +40,22 @@ export default function TechLoginScreen() {
     const navigateAfterLogin = async (token: string) => {
         try {
             const hour = new Date().getHours();
-            console.log('[DEBUG] navigateAfterLogin - hour:', hour);
             if (hour >= 8 && hour < 13) {
-                const url = API.tech.attendanceStatus();
-                console.log('[DEBUG] Fetching attendance:', url);
-                const res = await fetch(url, {
+                const res = await fetch(API.tech.attendanceStatus(), {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         Accept: 'application/json',
                     },
                 });
-                console.log('[DEBUG] Attendance response status:', res.status);
                 if (res.ok) {
                     const data = await res.json();
-                    console.log('[DEBUG] Attendance data:', JSON.stringify(data));
                     if (!data.timed_in) {
-                        console.log('[DEBUG] Redirecting to time-in');
                         router.replace('/(time-in)/time-in');
                         return;
                     }
                 }
             }
-        } catch (e: any) {
-            console.log('[DEBUG] navigateAfterLogin error:', e.message);
-        }
-        console.log('[DEBUG] Redirecting to home');
+        } catch {}
         router.replace("/(tech-tabs)/home");
     };
 
