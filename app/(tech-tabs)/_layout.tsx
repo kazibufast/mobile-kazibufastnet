@@ -1,9 +1,10 @@
 import { API } from '@/constants/api';
 import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Tabs, useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Dimensions, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { AppState, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -15,31 +16,40 @@ export default function TechTabsLayout() {
   const tabBarPaddingBottom = Platform.select({ ios: scaleSize(25), android: scaleSize(10) });
   const iconSize = scaleSize(24);
 
-  useEffect(() => {
-    const checkAttendance = async () => {
-      try {
-        const token = await getToken();
-        // Always call attendanceStatus — backend auto-closes stale records from previous days
-        const res = await fetch(API.tech.attendanceStatus(), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        });
+  const checkAttendance = useCallback(async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(API.tech.attendanceStatus(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
 
-        if (!res.ok) return;
+      if (!res.ok) return;
 
-        const data = await res.json();
-        // Only redirect to time-in between 8am–1pm
-        const hour = new Date().getHours();
-        if (!data.timed_in && hour >= 8 && hour < 13) {
-          router.replace('/(time-in)/time-in');
-        }
-      } catch {}
-    };
-
-    checkAttendance();
+      const data = await res.json();
+      const hour = new Date().getHours();
+      if (!data.timed_in && hour >= 8 && hour < 13) {
+        router.replace('/(time-in)/time-in');
+      }
+    } catch {}
   }, []);
+
+  // Check on initial mount and every time tabs regain focus
+  useFocusEffect(useCallback(() => { checkAttendance(); }, [checkAttendance]));
+
+  // Also check when app comes back from background
+  const appState = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        checkAttendance();
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
+  }, [checkAttendance]);
 
   const technicianTabs = [
     { name: 'home', title: 'Home', icon: 'home-outline' },
