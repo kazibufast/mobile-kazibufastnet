@@ -30,7 +30,7 @@ export default function TechTabsLayout() {
 
       const data = await res.json();
       const hour = new Date().getHours();
-      if (!data.timed_in && hour >= 8 && hour < 13) {
+      if (!data.timed_in && !data.timed_out_today && hour >= 8 && hour < 13) {
         router.replace('/(time-in)/time-in');
       }
     } catch {}

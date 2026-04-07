@@ -217,7 +217,7 @@ export default function TimeInScreen() {
       if (res.ok) {
         Alert.alert("Success", "Time Out recorded successfully!");
         setTimeout(() => {
-          router.push("/");
+          router.replace("/(tech-tabs)/home");
         }, 1500);
       } else {
         const err = await res.json();

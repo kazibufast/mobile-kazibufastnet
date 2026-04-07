@@ -49,7 +49,7 @@ export default function TechLoginScreen() {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    if (!data.timed_in) {
+                    if (!data.timed_in && !data.timed_out_today) {
                         router.replace('/(time-in)/time-in');
                         return;
                     }
