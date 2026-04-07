@@ -652,8 +652,7 @@ export default function TicketDetails() {
             <WebView
               key={`${refreshing}`}
               source={{
-                uri:
-                  API.tech.clientMap(ticket.latitude, ticket.longitude),
+                uri: `https://maps.google.com/maps?q=${ticket.latitude},${ticket.longitude}&z=18&output=embed`,
               }}
               style={styles.webview}
             />
