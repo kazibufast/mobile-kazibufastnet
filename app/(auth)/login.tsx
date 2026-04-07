@@ -37,6 +37,28 @@ export default function TechLoginScreen() {
     const [canResend, setCanResend] = useState(false);
     const [otpLoading, setOtpLoading] = useState(false);
 
+    const navigateAfterLogin = async (token: string) => {
+        try {
+            const hour = new Date().getHours();
+            if (hour >= 8 && hour < 13) {
+                const res = await fetch(API.tech.attendanceStatus(), {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                    },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!data.timed_in) {
+                        router.replace('/(time-in)/time-in');
+                        return;
+                    }
+                }
+            }
+        } catch {}
+        router.replace("/(tech-tabs)/home");
+    };
+
     // Auto-login: restore token from AsyncStorage on mount
     useEffect(() => {
         const restoreSession = async () => {
@@ -48,7 +70,7 @@ export default function TechLoginScreen() {
                     const userData = JSON.parse(savedUser);
                     setToken(savedToken);
                     setUser(userData);
-                    router.replace("/(tech-tabs)/home");
+                    await navigateAfterLogin(savedToken);
                     return;
                 }
             } catch {}
@@ -171,7 +193,7 @@ export default function TechLoginScreen() {
             setToken(data.token);
             setUser(data.user);
 
-            router.replace("/(tech-tabs)/home");
+            await navigateAfterLogin(data.token);
         } catch (error: any) {
             Alert.alert("Error", error.message || "Something went wrong");
         } finally {
