@@ -12,6 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 const scaleSize = (size: number) => Math.round(size * (width / 375));
 
+// Global flag to skip attendance check after time-out
+let skipNextAttendanceCheck = false;
+export const setSkipAttendanceCheck = () => { skipNextAttendanceCheck = true; };
+
 export default function TechTabsLayout() {
   const router = useRouter();
   const tabBarHeight = Platform.select({ ios: scaleSize(85), android: scaleSize(65) });
@@ -21,6 +25,10 @@ export default function TechTabsLayout() {
   const checkingRef = useRef(false);
   const checkAttendance = useCallback(async () => {
     if (checkingRef.current) return;
+    if (skipNextAttendanceCheck) {
+      skipNextAttendanceCheck = false;
+      return;
+    }
     checkingRef.current = true;
     try {
       const token = await getToken();

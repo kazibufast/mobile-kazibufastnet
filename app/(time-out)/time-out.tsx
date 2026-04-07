@@ -215,6 +215,8 @@ export default function TimeInScreen() {
       );
 
       if (res.ok) {
+        const { setSkipAttendanceCheck } = require("../(tech-tabs)/_layout");
+        setSkipAttendanceCheck();
         Alert.alert("Success", "Time Out recorded successfully!");
         setTimeout(() => {
           router.replace("/(tech-tabs)/home");
