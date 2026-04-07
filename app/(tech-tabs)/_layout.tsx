@@ -1,5 +1,7 @@
 import { API } from '@/constants/api';
-import { getToken } from '@/scripts/token';
+import { getToken, setToken } from '@/scripts/token';
+import { setUser } from '@/scripts/user';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Tabs, useRouter } from 'expo-router';
@@ -16,9 +18,13 @@ export default function TechTabsLayout() {
   const tabBarPaddingBottom = Platform.select({ ios: scaleSize(25), android: scaleSize(10) });
   const iconSize = scaleSize(24);
 
+  const checkingRef = useRef(false);
   const checkAttendance = useCallback(async () => {
+    if (checkingRef.current) return;
+    checkingRef.current = true;
     try {
       const token = await getToken();
+      if (!token) return;
       const res = await fetch(API.tech.attendanceStatus(), {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -26,6 +32,14 @@ export default function TechTabsLayout() {
         },
       });
 
+      if (res.status === 401) {
+        // Token expired — log out
+        setToken(null);
+        setUser(null);
+        await AsyncStorage.multiRemove(['token', 'user']);
+        router.replace('/(auth)/login');
+        return;
+      }
       if (!res.ok) return;
 
       const data = await res.json();
@@ -34,6 +48,7 @@ export default function TechTabsLayout() {
         router.replace('/(time-in)/time-in');
       }
     } catch {}
+    finally { checkingRef.current = false; }
   }, []);
 
   // Check on initial mount and every time tabs regain focus

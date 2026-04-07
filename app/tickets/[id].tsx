@@ -647,6 +647,7 @@ export default function TicketDetails() {
             </View>
           </View>
 
+          {ticket.latitude && ticket.longitude && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location on Map</Text>
             <WebView
@@ -657,6 +658,7 @@ export default function TicketDetails() {
               style={styles.webview}
             />
           </View>
+          )}
 
           {/* Action Buttons */}
           <TicketActionButtons ticket={ticket} onStatusChange={fetchTicketDetails} napId={selectedNapId} napPort={napPort} />

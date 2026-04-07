@@ -36,8 +36,11 @@ export default function TechLoginScreen() {
     const [resendTimer, setResendTimer] = useState(30);
     const [canResend, setCanResend] = useState(false);
     const [otpLoading, setOtpLoading] = useState(false);
+    const navigatingRef = useRef(false);
 
     const navigateAfterLogin = async (token: string) => {
+        if (navigatingRef.current) return;
+        navigatingRef.current = true;
         try {
             const hour = new Date().getHours();
             if (hour >= 8 && hour < 13) {
