@@ -192,7 +192,7 @@ const Profile: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {timedIn === false && (
+          {timedIn !== true && (
             <TouchableOpacity
               style={styles.timeInButton}
               onPress={() => router.push('/(time-in)/time-in')}
