@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native';
 import Header from '../../components/Header';
+import { Colors } from '@/constants/theme';
 
 interface TicketItem {
   id: number;
@@ -211,7 +212,7 @@ const Ticket: React.FC = () => {
     if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#00afa1" />
+        <ActivityIndicator size="small" color={Colors.primary} />
         <Text style={styles.footerText}>Loading more...</Text>
       </View>
     );
@@ -226,9 +227,9 @@ const Ticket: React.FC = () => {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity onPress={onRefresh} disabled={refreshing} style={styles.iconButton}>
               {refreshing ? (
-                <ActivityIndicator size="small" color="#00afa1" />
+                <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
-                <Ionicons name="refresh" size={20} color="#00afa1" />
+                <Ionicons name="refresh" size={20} color={Colors.primary} />
               )}
             </TouchableOpacity>
 
@@ -248,7 +249,7 @@ const Ticket: React.FC = () => {
               </View>
             ) : (
               <TouchableOpacity style={styles.iconButton} onPress={() => setSearchVisible(true)}>
-                <Ionicons name="search-outline" size={22} color="#00afa1" />
+                <Ionicons name="search-outline" size={22} color={Colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -268,7 +269,7 @@ const Ticket: React.FC = () => {
               key={f.value}
               style={[
                 styles.filterChip,
-                active && { backgroundColor: f.color || '#00afa1', borderColor: f.color || '#00afa1' },
+                active && { backgroundColor: f.color || Colors.primary, borderColor: f.color || Colors.primary },
               ]}
               onPress={() => applyStatusFilter(f.value)}
             >
@@ -312,7 +313,7 @@ const Ticket: React.FC = () => {
       <View style={styles.container}>
         <Header />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00afa1" />
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       </View>
     );
@@ -341,7 +342,7 @@ const Ticket: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.backgroundGray,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: Colors.border,
   },
   titleRow: {
     flexDirection: 'row',
@@ -397,8 +398,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   filterChipActive: {
-    backgroundColor: '#00afa1',
-    borderColor: '#00afa1',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterChipText: {
     fontSize: 13,
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#A0AEC0',
+    color: Colors.textLight,
     textAlign: 'center',
     paddingVertical: 40,
   },
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
   ticketId: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#00afa1',
+    color: Colors.primary,
   },
   dateTimeContainer: {
     flexDirection: 'row',
@@ -485,7 +486,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.border,
   },
   typeText: {
     fontSize: 13,
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#A0AEC0',
+    color: Colors.textLight,
   },
 });
 

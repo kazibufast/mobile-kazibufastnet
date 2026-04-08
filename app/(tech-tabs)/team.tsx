@@ -15,6 +15,7 @@ import {
     View
 } from "react-native";
 import Header from "../../components/Header";
+import { Colors } from '@/constants/theme';
 
 interface TeamInfo {
     id: number;
@@ -95,7 +96,7 @@ export default function TeamScreen() {
             <SafeAreaView style={styles.container}>
                 <Header />
                 <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                    <ActivityIndicator size="large" color="#00AFA1" />
+                    <ActivityIndicator size="large" color={Colors.primary} />
                 </View>
             </SafeAreaView>
         );
@@ -107,16 +108,16 @@ export default function TeamScreen() {
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00AFA1" colors={["#00AFA1"]} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />
                 }
             >
                 <View style={styles.titleRow}>
                     <Text style={styles.title}>My Team</Text>
                     <TouchableOpacity onPress={onRefresh} disabled={refreshing} style={styles.refreshButton}>
                         {refreshing ? (
-                            <ActivityIndicator size="small" color="#00AFA1" />
+                            <ActivityIndicator size="small" color={Colors.primary} />
                         ) : (
-                            <Ionicons name="refresh" size={20} color="#00AFA1" />
+                            <Ionicons name="refresh" size={20} color={Colors.primary} />
                         )}
                     </TouchableOpacity>
                 </View>
@@ -209,12 +210,12 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3,
         borderLeftWidth: 4,
-        borderLeftColor: "#00AFA1",
+        borderLeftColor: Colors.primary,
     },
     teamName: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#00AFA1",
+        color: Colors.primary,
         marginBottom: 12,
     },
     teamDetails: {
@@ -237,13 +238,13 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#4A5568",
+        color: Colors.textMedium,
         marginTop: 16,
         marginBottom: 8,
     },
     emptyText: {
         fontSize: 14,
-        color: "#A0AEC0",
+        color: Colors.textLight,
         textAlign: "center",
         lineHeight: 20,
     },
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "#00AFA1",
+        backgroundColor: Colors.primary,
         justifyContent: "center",
         alignItems: "center",
         marginRight: 14,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     },
     role: {
         fontSize: 13,
-        color: "#00AFA1",
+        color: Colors.primary,
         fontWeight: "500",
         textTransform: "capitalize",
         marginTop: 2,
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: "#27AE60",
+        backgroundColor: Colors.success,
         justifyContent: "center",
         alignItems: "center",
     },

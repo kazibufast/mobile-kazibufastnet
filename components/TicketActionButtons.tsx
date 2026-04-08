@@ -119,16 +119,13 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
 
       const { ticket: t } = await res.json();
 
-      const normalizedStatus: TicketStatus =
-        t.status === "accepted"
-          ? "accepted"
-          : t.status === "in progress"
-            ? "in progress"
-            : t.status === "completed"
-              ? "completed"
-              : t.status === "closed"
-                ? "closed"
-                : "pending";
+      const statusMap: Record<string, TicketStatus> = {
+        accepted: "accepted",
+        "in progress": "in progress",
+        completed: "completed",
+        closed: "closed",
+      };
+      const normalizedStatus: TicketStatus = statusMap[t.status] ?? "pending";
 
       setTicket({
         id: String(t.id),

@@ -18,6 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import { getUser } from '../../scripts/user';
+import { Colors } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -105,7 +106,7 @@ const Home: React.FC = () => {
       <SafeAreaView style={styles.safeArea}>
         <Header />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00A8FF" />
+          <ActivityIndicator size="large" color={Colors.primaryAlt} />
         </View>
       </SafeAreaView>
     );
@@ -119,7 +120,7 @@ const Home: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" colors={['#00A8FF']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primaryAlt} colors={[Colors.primaryAlt]} />
         }
       >
         <View style={styles.heroSection}>
@@ -136,9 +137,9 @@ const Home: React.FC = () => {
             <Text style={styles.sectionTitle}>Overview</Text>
             <TouchableOpacity onPress={onRefresh} disabled={refreshing} style={styles.refreshButton}>
               {refreshing ? (
-                <ActivityIndicator size="small" color="#00A8FF" />
+                <ActivityIndicator size="small" color={Colors.primaryAlt} />
               ) : (
-                <Ionicons name="refresh" size={20} color="#00A8FF" />
+                <Ionicons name="refresh" size={20} color={Colors.primaryAlt} />
               )}
             </TouchableOpacity>
           </View>
@@ -204,7 +205,7 @@ const Home: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.backgroundLight,
   },
   scrollView: {
     flex: 1,
@@ -228,12 +229,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: scaleSize(32),
     fontWeight: '800',
-    color: '#1A202C',
+    color: Colors.textDark,
     marginBottom: scaleSize(6),
   },
   welcome: {
     fontSize: scaleSize(18),
-    color: '#4A5568',
+    color: Colors.textMedium,
     fontWeight: '600',
     marginBottom: scaleSize(8),
   },
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: scaleSize(20),
     fontWeight: '700',
-    color: '#2D3748',
+    color: Colors.textBody,
     marginBottom: scaleSize(16),
   },
   statsGrid: {
@@ -269,12 +270,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: scaleSize(28),
     fontWeight: '800',
-    color: '#00A8FF',
+    color: Colors.primaryAlt,
     marginBottom: scaleSize(4),
   },
   statLabel: {
     fontSize: scaleSize(12),
-    color: '#718096',
+    color: Colors.textMuted,
     fontWeight: '500',
   },
   ticketsSection: {
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontSize: scaleSize(14),
-    color: '#00A8FF',
+    color: Colors.primaryAlt,
     fontWeight: '600',
   },
   refreshButton: {
@@ -317,11 +318,11 @@ const styles = StyleSheet.create({
   ticketClient: {
     fontSize: scaleSize(16),
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.primaryAlt,
   },
   ticketTime: {
     fontSize: scaleSize(12),
-    color: '#A0AEC0',
+    color: Colors.textLight,
     fontWeight: '500',
   },
   ticketFooter: {
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: scaleSize(14),
-    color: '#A0AEC0',
+    color: Colors.textLight,
     textAlign: 'center',
     paddingVertical: 30,
   },

@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
-export const Colors = {
+export const ThemeColors = {
   light: {
     text: '#11181C',
     background: '#fff',
@@ -25,6 +25,38 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
+};
+
+// App-wide color palette
+export const Colors = {
+  // Brand
+  primary: '#00afa1',        // teal - main brand color
+  primaryAlt: '#00A8FF',     // blue accent used on home screen
+
+  // Text
+  textDark: '#1A202C',       // headings, primary text
+  textBody: '#2D3748',       // body text, section titles
+  textMedium: '#4A5568',     // secondary text
+  textMuted: '#718096',      // labels, hints
+  textLight: '#A0AEC0',      // placeholders, empty states
+
+  // Backgrounds
+  backgroundLight: '#F8FAFC', // light page background
+  backgroundGray: '#f5f5f5',  // slightly darker gray background
+  backgroundMuted: '#f8f8f8', // muted sections
+  white: '#FFFFFF',
+
+  // Borders
+  border: '#e0e0e0',
+  borderLight: '#e8e8e8',
+  borderSubtle: '#f0f0f0',
+
+  // Status / semantic
+  success: '#27AE60',
+  warning: '#F39C12',
+  danger: '#E74C3C',
+  dangerLight: '#ff6b6b',
+  info: '#3498DB',
 };
 
 export const Fonts = Platform.select({

@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
+import { Colors } from '@/constants/theme';
 
 interface NapItem {
   id: number;
@@ -292,7 +293,7 @@ const Naps: React.FC = () => {
               <Text style={styles.typeText}>{nap.type?.toUpperCase()}</Text>
             </View>
             <View style={styles.splitterBadge}>
-              <Ionicons name="git-network-outline" size={14} color="#00afa1" />
+              <Ionicons name="git-network-outline" size={14} color={Colors.primary} />
               <Text style={styles.splitterText}>{nap.splitter_type}</Text>
             </View>
             <View style={styles.tagCountBadge}>
@@ -312,7 +313,7 @@ const Naps: React.FC = () => {
 
           {distance ? (
             <View style={styles.distanceRow}>
-              <Ionicons name="navigate-outline" size={14} color="#00afa1" />
+              <Ionicons name="navigate-outline" size={14} color={Colors.primary} />
               <Text style={styles.distanceText}>{distance}</Text>
             </View>
           ) : null}
@@ -329,21 +330,21 @@ const Naps: React.FC = () => {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {/* QR Scan button */}
             <TouchableOpacity onPress={handleQrScan} style={styles.iconButton}>
-              <Ionicons name="qr-code-outline" size={20} color="#00afa1" />
+              <Ionicons name="qr-code-outline" size={20} color={Colors.primary} />
             </TouchableOpacity>
 
             {/* Add NAP button */}
             <TouchableOpacity onPress={() => router.push('/naps/create')} style={styles.iconButton}>
-              <Ionicons name="add-circle-outline" size={22} color="#00afa1" />
+              <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
             </TouchableOpacity>
 
             {/* Sync button */}
             <TouchableOpacity onPress={handleSync} disabled={syncing} style={styles.iconButton}>
               {syncing ? (
-                <ActivityIndicator size="small" color="#00afa1" />
+                <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="cloud-upload-outline" size={20} color="#00afa1" />
+                  <Ionicons name="cloud-upload-outline" size={20} color={Colors.primary} />
                   {pendingCount > 0 && (
                     <View style={styles.pendingBadge}>
                       <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
@@ -356,9 +357,9 @@ const Naps: React.FC = () => {
             {/* Refresh button */}
             <TouchableOpacity onPress={onRefresh} disabled={refreshing} style={styles.iconButton}>
               {refreshing ? (
-                <ActivityIndicator size="small" color="#00afa1" />
+                <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
-                <Ionicons name="refresh" size={20} color="#00afa1" />
+                <Ionicons name="refresh" size={20} color={Colors.primary} />
               )}
             </TouchableOpacity>
 
@@ -379,7 +380,7 @@ const Naps: React.FC = () => {
               </View>
             ) : (
               <TouchableOpacity style={styles.iconButton} onPress={() => setSearchVisible(true)}>
-                <Ionicons name="search-outline" size={22} color="#00afa1" />
+                <Ionicons name="search-outline" size={22} color={Colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -393,7 +394,7 @@ const Naps: React.FC = () => {
       <View style={styles.container}>
         <Header />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00afa1" />
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       </View>
     );
@@ -443,7 +444,7 @@ const Naps: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.backgroundGray,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -453,7 +454,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: Colors.border,
   },
   titleRow: {
     flexDirection: 'row',
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   pendingBadge: {
-    backgroundColor: '#E74C3C',
+    backgroundColor: Colors.danger,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#A0AEC0',
+    color: Colors.textLight,
     textAlign: 'center',
     paddingVertical: 40,
   },
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
   napSerial: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#00afa1',
+    color: Colors.primary,
   },
   activeBadge: {
     flexDirection: 'row',
@@ -580,7 +581,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.border,
   },
   typeText: {
     fontSize: 12,
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   },
   splitterText: {
     fontSize: 12,
-    color: '#00afa1',
+    color: Colors.primary,
     fontWeight: '600',
   },
   tagCountBadge: {
@@ -614,7 +615,7 @@ const styles = StyleSheet.create({
   },
   tagCountText: {
     fontSize: 12,
-    color: '#718096',
+    color: Colors.textMuted,
     fontWeight: '600',
   },
   addressRow: {
@@ -634,7 +635,7 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     fontSize: 13,
-    color: '#00afa1',
+    color: Colors.primary,
     fontWeight: '500',
   },
   scannerContainer: {

@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { setToken } from '../../scripts/token';
 import { getUser, setUser } from '../../scripts/user';
+import { Colors } from '@/constants/theme';
 
 const Profile: React.FC = () => {
   const router = useRouter();
@@ -231,7 +232,7 @@ const Profile: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Ionicons name="code-slash" size={24} color="#00afa1" />
+              <Ionicons name="code-slash" size={24} color={Colors.primary} />
               <Text style={styles.modalTitle}>Developer Options</Text>
             </View>
 
@@ -299,14 +300,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 50,
     paddingHorizontal: 20,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: Colors.backgroundMuted,
     marginBottom: 20,
   },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#00afa1ff',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: Colors.borderSubtle,
   },
   settingLeft: {
     flexDirection: 'row',
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 10,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: Colors.backgroundMuted,
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 12,
     paddingVertical: 15,
-    backgroundColor: '#27AE60',
+    backgroundColor: Colors.success,
     borderRadius: 8,
     alignItems: 'center',
     flexDirection: 'row',
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 12,
     paddingVertical: 15,
-    backgroundColor: '#F39C12',
+    backgroundColor: Colors.warning,
     borderRadius: 8,
     alignItems: 'center',
     flexDirection: 'row',
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 100,
     paddingVertical: 15,
-    backgroundColor: '#ff6b6b',
+    backgroundColor: Colors.dangerLight,
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
   },
   envOption: {
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.border,
     borderRadius: 12,
     padding: 16,
   },
