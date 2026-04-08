@@ -38,28 +38,14 @@ export default function TechLoginScreen() {
     const [otpLoading, setOtpLoading] = useState(false);
     const navigatingRef = useRef(false);
 
-    const navigateAfterLogin = async (token: string) => {
+    const navigateAfterLogin = (userStatus: string) => {
         if (navigatingRef.current) return;
         navigatingRef.current = true;
-        try {
-            const hour = new Date().getHours();
-            if (hour >= 8 && hour < 13) {
-                const res = await fetch(API.tech.attendanceStatus(), {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        Accept: 'application/json',
-                    },
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (!data.timed_in && !data.timed_out_today) {
-                        router.replace('/(time-in)/time-in');
-                        return;
-                    }
-                }
-            }
-        } catch {}
-        router.replace("/(tech-tabs)/home");
+        if (userStatus === "active") {
+            router.replace("/(tech-tabs)/home");
+        } else {
+            router.replace("/(time-in)/time-in");
+        }
     };
 
     // Auto-login: restore token from AsyncStorage on mount
@@ -73,7 +59,7 @@ export default function TechLoginScreen() {
                     const userData = JSON.parse(savedUser);
                     setToken(savedToken);
                     setUser(userData);
-                    await navigateAfterLogin(savedToken);
+                    navigateAfterLogin(userData.status || "out");
                     return;
                 }
             } catch {}
@@ -196,7 +182,7 @@ export default function TechLoginScreen() {
             setToken(data.token);
             setUser(data.user);
 
-            await navigateAfterLogin(data.token);
+            navigateAfterLogin(data.user?.status || "out");
         } catch (error: any) {
             Alert.alert("Error", error.message || "Something went wrong");
         } finally {

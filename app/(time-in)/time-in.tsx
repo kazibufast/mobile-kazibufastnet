@@ -1,6 +1,7 @@
 import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
-import { getUser } from "@/scripts/user";
+import { getUser, setUser } from "@/scripts/user";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Fontisto, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { CameraCapturedPicture, CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
@@ -230,6 +231,13 @@ export default function TimeInScreen() {
       const data = await res.json();
 
       if (res.ok) {
+        // Update user status to active
+        const currentUser = getUser();
+        if (currentUser) {
+          const updated = { ...currentUser, status: "active" };
+          setUser(updated);
+          await AsyncStorage.setItem("user", JSON.stringify(updated));
+        }
         Alert.alert("Success", "Time In recorded successfully!");
         setTimeout(() => {
           router.push("/(tech-tabs)/home");

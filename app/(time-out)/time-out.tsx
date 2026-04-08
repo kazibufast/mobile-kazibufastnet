@@ -1,6 +1,7 @@
 import { API } from "@/constants/api";
 import { getToken } from "@/scripts/token";
-import { getUser } from "@/scripts/user";
+import { getUser, setUser } from "@/scripts/user";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Fontisto, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import {
   Camera,
@@ -215,6 +216,13 @@ export default function TimeInScreen() {
       );
 
       if (res.ok) {
+        // Update user status to out
+        const currentUser = getUser();
+        if (currentUser) {
+          const updated = { ...currentUser, status: "out" };
+          setUser(updated);
+          await AsyncStorage.setItem("user", JSON.stringify(updated));
+        }
         const { setSkipAttendanceCheck } = require("../(tech-tabs)/_layout");
         setSkipAttendanceCheck();
         Alert.alert("Success", "Time Out recorded successfully!");
