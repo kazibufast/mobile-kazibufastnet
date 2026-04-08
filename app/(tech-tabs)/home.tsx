@@ -1,4 +1,5 @@
 import { API } from '@/constants/api';
+import { showToast } from '@/components/Toast';
 import { getToken } from '@/scripts/token';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -71,7 +72,9 @@ const Home: React.FC = () => {
       const data = await response.json();
       setStats(data.stats);
       setRecentTickets(data.recent_tickets || []);
-    } catch {} finally {
+    } catch {
+      showToast('Failed to load dashboard', 'error');
+    } finally {
       setLoading(false);
       setRefreshing(false);
     }

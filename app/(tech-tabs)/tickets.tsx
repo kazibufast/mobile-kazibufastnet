@@ -1,4 +1,5 @@
 import { API } from '@/constants/api';
+import { showToast } from '@/components/Toast';
 import { getToken } from '@/scripts/token';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -90,7 +91,9 @@ const Ticket: React.FC = () => {
 
       setCurrentPage(data.current_page);
       setLastPage(data.last_page);
-    } catch {} finally {
+    } catch {
+      showToast('Failed to load tickets', 'error');
+    } finally {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);

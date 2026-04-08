@@ -1,4 +1,5 @@
 import { API } from "@/constants/api";
+import { showToast } from "@/components/Toast";
 import { getToken } from "@/scripts/token";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from '@react-navigation/native';
@@ -54,7 +55,9 @@ export default function TeamScreen() {
             const data = await response.json();
             setTeam(data.team);
             setMembers(data.members || []);
-        } catch {} finally {
+        } catch {
+            showToast('Failed to load team', 'error');
+        } finally {
             setLoading(false);
             setRefreshing(false);
         }

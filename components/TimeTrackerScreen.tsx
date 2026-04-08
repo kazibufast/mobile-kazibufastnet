@@ -173,6 +173,7 @@ export default function TimeTrackerScreen({ type }: TimeTrackerScreenProps) {
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
             { headers: { "User-Agent": "expo-app" } }
           );
+          if (!res.ok) throw new Error("Geocoding failed");
           const data = await res.json();
           const addr = data.address || {};
           let text = "";
@@ -262,11 +263,10 @@ export default function TimeTrackerScreen({ type }: TimeTrackerScreenProps) {
           }
         }, 1500);
       } else {
-        if (isTimeIn) {
+        try {
           const data = await res.json();
           Alert.alert("Error", data.message || errorMessage);
-        } else {
-          const err = await res.json();
+        } catch {
           Alert.alert("Error", errorMessage);
         }
       }
