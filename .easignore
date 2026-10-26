@@ -1,0 +1,56 @@
+# Same as .gitignore, but upload package-lock.json so EAS builds install the
+# exact dependency versions instead of resolving the latest ones with yarn.
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+scripts/config.js
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
+
+# Lock files — each dev can use npm or bun, so don't commit lock files
+bun.lockb
+yarn.lock
+
+# JetBrains IDE
+.idea/
+
+# Log files
+*.log
