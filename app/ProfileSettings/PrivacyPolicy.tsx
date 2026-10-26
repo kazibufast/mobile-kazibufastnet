@@ -22,7 +22,7 @@ const PrivacyPolicy: React.FC = () => {
             </TouchableOpacity>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Privacy Policy</Text>
-              <Text style={styles.headerSubtitle}>Effective April 1, 2026</Text>
+              <Text style={styles.headerSubtitle}>Effective October 26, 2026</Text>
             </View>
           </View>
 
@@ -41,7 +41,10 @@ const PrivacyPolicy: React.FC = () => {
               We collect the following information when you use the app:
             </Text>
             <Text style={styles.bulletItem}>
-              {'\u2022'} Phone number -- used for OTP-based authentication to verify your identity.
+              {'\u2022'} Phone number -- used to identify your account when you log in, and to send one-time passwords (OTP) by SMS if you log in with OTP.
+            </Text>
+            <Text style={styles.bulletItem}>
+              {'\u2022'} Password -- used to verify your identity when you log in with your phone number and password.
             </Text>
             <Text style={styles.bulletItem}>
               {'\u2022'} Location data -- precise GPS location used for calculating distance to NAP boxes and time-in/time-out verification.
@@ -60,7 +63,7 @@ const PrivacyPolicy: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>How We Use Your Information</Text>
             <Text style={styles.bulletItem}>
-              {'\u2022'} Authenticate your identity via OTP verification.
+              {'\u2022'} Authenticate your identity via password or OTP verification.
             </Text>
             <Text style={styles.bulletItem}>
               {'\u2022'} Track attendance and work hours through time-in/time-out records.
@@ -83,6 +86,9 @@ const PrivacyPolicy: React.FC = () => {
             </Text>
             <Text style={styles.bulletItem}>
               {'\u2022'} Work data is transmitted to and stored on company servers at sys.kazibufastnet.com.
+            </Text>
+            <Text style={styles.bulletItem}>
+              {'\u2022'} Your password is stored on company servers in hashed (encrypted) form. The app does not save your password on your device.
             </Text>
             <Text style={styles.bulletItem}>
               {'\u2022'} Photos taken during time-in/time-out are transmitted to company servers.

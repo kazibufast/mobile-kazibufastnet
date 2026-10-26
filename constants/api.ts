@@ -58,7 +58,8 @@ export const API = {
   // Client data
   get subscriptions() { return `${getApiBaseUrl()}/api/app/client/subscriptions`; },
 
-  // Technician auth (OTP-based, 30-day token)
+  // Technician auth (mobile number + password, or OTP fallback)
+  get techLogin() { return `${getApiBaseUrl()}/api/app/tech/login`; },
   get techVerifyNumber() { return `${getApiBaseUrl()}/api/app/tech/verify-number`; },
   get techOtp() { return `${getApiBaseUrl()}/api/app/tech/otp`; },
 

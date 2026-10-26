@@ -26,6 +26,12 @@ export default function TechLoginScreen() {
     const router = useRouter();
     const otpRefs = useRef<(TextInput | null)[]>([]);
 
+    const [loginMode, setLoginMode] = useState<"password" | "otp">("password");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [passwordFocused, setPasswordFocused] = useState(false);
+    const passwordRef = useRef<TextInput | null>(null);
+
     const [phoneNumber, setPhoneNumber] = useState("");
     const [loading, setLoading] = useState(false);
     const [checkingSession, setCheckingSession] = useState(true);
@@ -117,6 +123,49 @@ export default function TechLoginScreen() {
         return `+63 ${cleaned}`;
     };
 
+    const saveSessionAndNavigate = async (token: string, user: any) => {
+        await AsyncStorage.setItem("token", token);
+        await AsyncStorage.setItem("user", JSON.stringify(user));
+        setToken(token);
+        setUser(user);
+        navigateAfterLogin(user?.status || "out");
+    };
+
+    // Password login
+    const handlePasswordLogin = async () => {
+        const cleanPhone = phoneNumber.replace(/\D/g, "");
+        if (!cleanPhone.startsWith("9") || cleanPhone.length !== 10) {
+            return Alert.alert("Error", "Please enter a valid 10-digit phone number starting with 9");
+        }
+        if (!password) {
+            return Alert.alert("Error", "Please enter your password");
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(API.techLogin, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify({ mobile_number: "+63" + cleanPhone, password }),
+            });
+
+            let data: any = {};
+            try {
+                data = await response.json();
+            } catch {}
+
+            if (!response.ok || !data.token) {
+                throw new Error(data.message || "Login failed. Please try again.");
+            }
+
+            await saveSessionAndNavigate(data.token, data.user);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Could not connect. Please check your internet connection.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Step 1: Send OTP
     const handleSendOtp = async () => {
         const cleanPhone = phoneNumber.replace(/\D/g, "");
@@ -176,13 +225,7 @@ export default function TechLoginScreen() {
                 throw new Error(data.message || "Invalid OTP");
             }
 
-            // Store token and user
-            await AsyncStorage.setItem("token", data.token);
-            await AsyncStorage.setItem("user", JSON.stringify(data.user));
-            setToken(data.token);
-            setUser(data.user);
-
-            navigateAfterLogin(data.user?.status || "out");
+            await saveSessionAndNavigate(data.token, data.user);
         } catch (error: any) {
             Alert.alert("Error", error.message || "Something went wrong");
         } finally {
@@ -360,6 +403,98 @@ export default function TechLoginScreen() {
                     <View style={styles.formContainer}>
                         <Text style={styles.formTitle}>Technician Login</Text>
 
+                        {loginMode === "password" ? (
+                        <>
+                        <View style={[styles.inputContainer, phoneFocused && styles.inputFocused]}>
+                            <View style={styles.inputIcon}>
+                                <Ionicons
+                                    name="call-outline"
+                                    size={20}
+                                    color={phoneFocused ? "#30BCBB" : "#94A3B8"}
+                                />
+                            </View>
+                            <View style={styles.countryCode}>
+                                <Text style={styles.countryCodeText}>+63</Text>
+                            </View>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="9XXXXXXXXX"
+                                placeholderTextColor="#94A3B8"
+                                keyboardType="phone-pad"
+                                textContentType="username"
+                                value={formatPhoneDisplay(phoneNumber)}
+                                onChangeText={(text) => setPhoneNumber(text.replace(/\D/g, "").slice(0, 10))}
+                                onFocus={() => setPhoneFocused(true)}
+                                onBlur={() => setPhoneFocused(false)}
+                                maxLength={13}
+                                onSubmitEditing={() => passwordRef.current?.focus()}
+                                returnKeyType="next"
+                                editable={!loading}
+                            />
+                        </View>
+
+                        <View style={[styles.inputContainer, styles.passwordContainer, passwordFocused && styles.inputFocused]}>
+                            <View style={styles.inputIcon}>
+                                <Ionicons
+                                    name="lock-closed-outline"
+                                    size={20}
+                                    color={passwordFocused ? "#30BCBB" : "#94A3B8"}
+                                />
+                            </View>
+                            <TextInput
+                                ref={passwordRef}
+                                style={styles.input}
+                                placeholder="Password"
+                                placeholderTextColor="#94A3B8"
+                                secureTextEntry={!showPassword}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                autoComplete="password"
+                                textContentType="password"
+                                value={password}
+                                onChangeText={setPassword}
+                                onFocus={() => setPasswordFocused(true)}
+                                onBlur={() => setPasswordFocused(false)}
+                                onSubmitEditing={handlePasswordLogin}
+                                returnKeyType="go"
+                                editable={!loading}
+                            />
+                            <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(!showPassword)}>
+                                <Ionicons
+                                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                    size={20}
+                                    color="#94A3B8"
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.button,
+                                (phoneNumber.length !== 10 || !password || loading) && styles.buttonDisabled,
+                            ]}
+                            onPress={handlePasswordLogin}
+                            disabled={loading || phoneNumber.length !== 10 || !password}
+                            activeOpacity={0.9}
+                        >
+                            <View style={styles.buttonContent}>
+                                {loading ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.buttonText}>Login</Text>
+                                        <Ionicons name="log-in-outline" size={20} color="#fff" />
+                                    </>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.switchModeButton} onPress={() => setLoginMode("otp")} disabled={loading}>
+                            <Text style={styles.switchModeText}>Login with OTP instead</Text>
+                        </TouchableOpacity>
+                        </>
+                        ) : (
+                        <>
                         <View style={styles.inputContainer}>
                             <View style={styles.inputIcon}>
                                 <Ionicons
@@ -410,6 +545,12 @@ export default function TechLoginScreen() {
                                 )}
                             </View>
                         </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.switchModeButton} onPress={() => setLoginMode("password")} disabled={loading}>
+                            <Text style={styles.switchModeText}>Login with password instead</Text>
+                        </TouchableOpacity>
+                        </>
+                        )}
                     </View>
 
                 </ScrollView>
@@ -565,6 +706,23 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.6,
         shadowRadius: 8,
+    },
+    passwordContainer: {
+        marginTop: 12,
+        marginBottom: 20,
+    },
+    eyeButton: {
+        paddingHorizontal: 16,
+    },
+    switchModeButton: {
+        alignItems: "center",
+        marginTop: -8,
+        paddingVertical: 4,
+    },
+    switchModeText: {
+        color: "#30BCBB",
+        fontSize: 14,
+        fontWeight: "600",
     },
     helperText: {
         fontSize: 12,
