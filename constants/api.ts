@@ -10,6 +10,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export const API_ENVIRONMENTS = {
   development: "https://sys.kazibufastnet.test",
   production: "https://sys.kazibufastnet.com",
+  // `php artisan serve` on the host machine, as seen from the Android emulator
+  local: "http://10.0.2.2:8000",
 } as const;
 
 const STORAGE_KEY = "api_base_url";
@@ -41,6 +43,7 @@ export async function setApiBaseUrl(url: string): Promise<void> {
 export function getCurrentEnvironment(): string {
   if (_baseUrl === API_ENVIRONMENTS.production) return "Production";
   if (_baseUrl === API_ENVIRONMENTS.development) return "Development";
+  if (_baseUrl === API_ENVIRONMENTS.local) return "Local";
   return "Custom";
 }
 

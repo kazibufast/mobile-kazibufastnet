@@ -572,6 +572,7 @@ export default function TechLoginScreen() {
                             {([
                                 { label: "Development", url: API_ENVIRONMENTS.development, color: "#F39C12" },
                                 { label: "Production", url: API_ENVIRONMENTS.production, color: "#27AE60" },
+                                ...(__DEV__ ? [{ label: "Local (emulator)", url: API_ENVIRONMENTS.local, color: "#8E44AD" }] : []),
                             ]).map((opt) => {
                                 const isActive = getApiBaseUrl() === opt.url;
                                 return (
