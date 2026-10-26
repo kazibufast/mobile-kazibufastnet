@@ -21,6 +21,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "/Users/bayltapdasan/.expo/keys/kazibufast-play-submit.json",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    }
   }
 }
