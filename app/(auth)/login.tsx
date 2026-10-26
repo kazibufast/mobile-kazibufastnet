@@ -405,7 +405,7 @@ export default function TechLoginScreen() {
 
                         {loginMode === "password" ? (
                         <>
-                        <View style={[styles.inputContainer, phoneFocused && styles.inputFocused]}>
+                        <View style={styles.inputContainer}>
                             <View style={styles.inputIcon}>
                                 <Ionicons
                                     name="call-outline"
@@ -433,7 +433,7 @@ export default function TechLoginScreen() {
                             />
                         </View>
 
-                        <View style={[styles.inputContainer, styles.passwordContainer, passwordFocused && styles.inputFocused]}>
+                        <View style={[styles.inputContainer, styles.passwordContainer]}>
                             <View style={styles.inputIcon}>
                                 <Ionicons
                                     name="lock-closed-outline"
