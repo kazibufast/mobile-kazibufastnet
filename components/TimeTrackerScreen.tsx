@@ -37,6 +37,53 @@ const scaleSize = (size: number) => {
   return Math.round(size * Math.min(scale, 1.3));
 };
 
+const LOCATION_TIMEOUT_MS = 10000;
+const GEOCODE_TIMEOUT_MS = 8000;
+
+/**
+ * Get a fresh GPS fix, falling back to the last known position if the
+ * device can't produce one in time (weak GPS indoors, emulators).
+ */
+const getPosition = async (): Promise<Location.LocationObject | null> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), LOCATION_TIMEOUT_MS);
+  });
+
+  const fresh = await Promise.race([
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null),
+    timeout,
+  ]);
+  clearTimeout(timer);
+
+  return fresh ?? (await Location.getLastKnownPositionAsync().catch(() => null));
+};
+
+/** Reverse-geocode coordinates into "Barangay X, Town, Province". */
+const reverseGeocode = async (lat: number, lon: number): Promise<string> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+      { headers: { "User-Agent": "expo-app" }, signal: controller.signal }
+    );
+    if (!res.ok) throw new Error("Geocoding failed");
+    const data = await res.json();
+    const addr = data.address || {};
+    let text = "";
+    if (addr.suburb || addr.neighbourhood || addr.hamlet)
+      text += `Barangay ${addr.suburb || addr.neighbourhood || addr.hamlet}, `;
+    if (addr.city || addr.town || addr.village)
+      text += `${addr.city || addr.town || addr.village}, `;
+    if (addr.state) text += `${addr.state}`;
+    return text;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 interface Technician {
   id: string;
   name: string;
@@ -139,57 +186,56 @@ export default function TimeTrackerScreen({ type }: TimeTrackerScreenProps) {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      setTechnician(user);
+
+      if (Platform.OS === "web") {
+        setLocationText("Location not available on web.");
+        setIsLoading(false);
+        return;
+      }
+
+      let lat: number;
+      let lon: number;
       try {
-        setTechnician(user);
-
-        if (Platform.OS === "web") {
-          setLocationText("Location not available on web.");
-        } else {
-          const { status } =
-            await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            setLocationText("Location permission denied.");
-            Alert.alert(
-              "Location Required",
-              "Location permission is required for attendance. Please enable it in your device settings.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Open Settings",
-                  onPress: () => Linking.openSettings(),
-                },
-              ]
-            );
-            return;
-          }
-          const position = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          setLocationCoords({ latitude: lat, longitude: lon });
-
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-            { headers: { "User-Agent": "expo-app" } }
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          setLocationText("Location permission denied.");
+          Alert.alert(
+            "Location Required",
+            "Location permission is required for attendance. Please enable it in your device settings.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Open Settings",
+                onPress: () => Linking.openSettings(),
+              },
+            ]
           );
-          if (!res.ok) throw new Error("Geocoding failed");
-          const data = await res.json();
-          const addr = data.address || {};
-          let text = "";
-          if (addr.suburb || addr.neighbourhood || addr.hamlet)
-            text += `Barangay ${
-              addr.suburb || addr.neighbourhood || addr.hamlet
-            }, `;
-          if (addr.city || addr.town || addr.village)
-            text += `${addr.city || addr.town || addr.village}, `;
-          if (addr.state) text += `${addr.state}`;
-          setLocationText(text || "Location not found.");
+          return;
         }
-      } catch (error) {
+
+        const position = await getPosition();
+        if (!position) {
+          setLocationText("Unable to retrieve location.");
+          return;
+        }
+        lat = position.coords.latitude;
+        lon = position.coords.longitude;
+        setLocationCoords({ latitude: lat, longitude: lon });
+      } catch {
         setLocationText("Unable to retrieve location.");
+        return;
       } finally {
         setIsLoading(false);
+      }
+
+      // The address is display-only, so don't block the screen on it
+      setLocationText("Getting address...");
+      try {
+        const text = await reverseGeocode(lat, lon);
+        setLocationText(text || "Location not found.");
+      } catch {
+        setLocationText(`${lat.toFixed(5)}, ${lon.toFixed(5)}`);
       }
     };
     loadData();
