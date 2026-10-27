@@ -207,13 +207,6 @@ const OverlayButton: React.FC = () => {
 
   const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (status !== 'granted') {
-        Alert.alert('Permission required', 'Sorry, we need camera roll permissions to upload images.');
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
@@ -241,13 +234,6 @@ const OverlayButton: React.FC = () => {
 
   const pickVideo = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (status !== 'granted') {
-        Alert.alert('Permission required', 'Sorry, we need camera roll permissions to upload videos.');
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["videos"],
         allowsEditing: true,

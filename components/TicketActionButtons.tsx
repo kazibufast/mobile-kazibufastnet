@@ -18,7 +18,6 @@ import {
   Dimensions,
   Image,
   Modal,
-  Platform,
   StyleProp,
   StyleSheet,
   Text,
@@ -290,15 +289,6 @@ const TicketActionButtons: React.FC<{ onStatusChange?: () => void; napId?: numbe
     setter: (uri: string | null) => void,
     label: string,
   ) => {
-    if (Platform.OS !== "web") {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        showToast("Please allow access to photos", "error");
-        return;
-      }
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: false, // ← Changed from true to false
